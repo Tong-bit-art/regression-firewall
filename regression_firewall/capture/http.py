@@ -191,6 +191,10 @@ class ManagedServer:
             stdout=self._log,
             stderr=subprocess.STDOUT,
             env=env,
+            # Detach from our process group: CI/TTY environments can deliver
+            # group-wide signals (e.g. SIGTTIN/SIGTTOU stops a backgrounded
+            # child) that leave the server alive but frozen.
+            start_new_session=(os.name == "posix"),
         )
 
         deadline = time.monotonic() + self.cfg.ready_timeout
@@ -212,7 +216,7 @@ class ManagedServer:
             except (urllib.error.URLError, OSError, TimeoutError):
                 time.sleep(0.25)
 
-        diagnostics = _startup_diagnostics(base_url, self.port, self.log_path)
+        diagnostics = _startup_diagnostics(base_url, self.port, self.log_path, self._proc.pid)
         self.stop()
         raise CaptureError(
             f"server did not become ready within {self.cfg.ready_timeout:g}s "
@@ -249,14 +253,24 @@ def _free_port() -> int:
         return sock.getsockname()[1]
 
 
-def _startup_diagnostics(base_url: str, port: int | None, log_path: Path) -> str:
-    """Facts collected when readiness times out: is the process listening on
-    the expected port at the raw-TCP level, and what did it actually print?
-    This distinguishes 'child never bound' from 'bound but urllib cannot
-    reach it' (e.g. host-level proxy/firewall interference)."""
+def _startup_diagnostics(base_url: str, port: int | None, log_path: Path,
+                         pid: int | None) -> str:
+    """Facts collected when readiness times out: child process state, raw-TCP
+    reachability of the expected port, and the effective proxy config. This
+    distinguishes 'child never started/bound' from 'child alive but frozen'
+    from 'bound but unreachable above the TCP level'."""
     import socket
+    import subprocess as _sp
 
     parts = [f"log tail: {_log_tail(log_path)}"]
+    if pid is not None and os.name == "posix":
+        try:
+            ps = _sp.run(["ps", "-o", "stat=,command=", "-p", str(pid)],
+                         capture_output=True, text=True, timeout=5)
+            state = ps.stdout.strip() or "<process gone>"
+            parts.append(f"child process: {state[:160]}")
+        except (OSError, _sp.TimeoutExpired):
+            pass
     if port is None:
         parts.append("port: external (no {port} template)")
         return "; ".join(parts)
@@ -264,11 +278,10 @@ def _startup_diagnostics(base_url: str, port: int | None, log_path: Path) -> str
     sock.settimeout(2)
     try:
         sock.connect(("127.0.0.1", port))
-        parts.append(f"raw TCP connect to 127.0.0.1:{port}: SUCCESS (server is listening; "
+        parts.append(f"raw TCP connect to 127.0.0.1:{port}: SUCCESS (listening; "
                      "readiness poll failed above the TCP level)")
     except OSError as exc:
-        parts.append(f"raw TCP connect to 127.0.0.1:{port}: FAILED ({exc}) "
-                     "(server never bound the expected port)")
+        parts.append(f"raw TCP connect to 127.0.0.1:{port}: FAILED ({exc})")
     finally:
         sock.close()
     try:
