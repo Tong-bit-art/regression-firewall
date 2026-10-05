@@ -43,6 +43,36 @@ jobs:
       - name: Install dev tools
         run: pip install -e ".[dev]"
 
+      - name: macOS loopback diagnostics
+        if: runner.os == 'macOS'
+        run: |
+          /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate || true
+          /usr/libexec/ApplicationFirewall/socketfilterfw --getblockall || true
+          python - <<'PY'
+          import socket, threading, time
+          srv = socket.socket()
+          srv.bind(("127.0.0.1", 0))
+          srv.listen(5)
+          port = srv.getsockname()[1]
+          served = threading.Thread(target=lambda: (srv.accept(),), daemon=True)
+          served.start()
+          for attempt in range(6):
+              t0 = time.monotonic()
+              c = socket.socket()
+              c.settimeout(2)
+              try:
+                  c.connect(("127.0.0.1", port))
+                  print(f"attempt {attempt}: connect OK in {time.monotonic()-t0:.2f}s")
+                  c.close()
+                  break
+              except OSError as exc:
+                  print(f"attempt {attempt}: {exc} after {time.monotonic()-t0:.2f}s")
+              finally:
+                  c.close()
+              time.sleep(0.5)
+          srv.close()
+          PY
+
       - name: Run tests (unit + integration + evals)
         run: python -m pytest tests -q
 

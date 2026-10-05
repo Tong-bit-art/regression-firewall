@@ -271,6 +271,14 @@ def _startup_diagnostics(base_url: str, port: int | None, log_path: Path,
             parts.append(f"child process: {state[:160]}")
         except (OSError, _sp.TimeoutExpired):
             pass
+        if port is not None:
+            try:
+                lsof = _sp.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"],
+                               capture_output=True, text=True, timeout=5)
+                listeners = lsof.stdout.strip().replace("\n", " | ") or "<no LISTEN socket on port>"
+                parts.append(f"lsof: {listeners[:200]}")
+            except (OSError, _sp.TimeoutExpired):
+                pass
     if port is None:
         parts.append("port: external (no {port} template)")
         return "; ".join(parts)
