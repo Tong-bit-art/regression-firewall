@@ -1,0 +1,24 @@
+name: http_header_change
+surface: http
+description: "Cache-Control header flips from no-cache to max-age=300."
+mutations:
+    - file: server.py
+      find: |-
+        self.send_header("Cache-Control", "no-cache")
+      replace: |-
+        self.send_header("Cache-Control", "max-age=300")
+expect:
+  changes:
+    - surface: http
+      target: "GET /users/42"
+      category: header_changed
+      path: "cache-control"
+      classification: uncertain
+      severity: low
+    - surface: http
+      target: "POST /login"
+      category: header_changed
+      path: "cache-control"
+      classification: uncertain
+      severity: low
+  verdict: REVIEW

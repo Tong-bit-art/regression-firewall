@@ -1,0 +1,25 @@
+name: api_expected_change
+surface: public_api
+description: "RetryPolicy removal is intentional and recorded in the intent file."
+mutations:
+    - file: samplelib/__init__.py
+      find: |-
+        class RetryPolicy:
+            def __init__(self, attempts=5):
+                self.attempts = attempts
+      replace: |-
+        
+intent:
+  task: "Drop RetryPolicy; users should use Client-level retries."
+  expected_changes:
+    - surface: public_api
+      target: "samplelib.RetryPolicy"
+      category: symbol_removed
+      note: "intentional removal"
+expect:
+  changes:
+    - surface: public_api
+      target: "samplelib.RetryPolicy"
+      category: symbol_removed
+      classification: expected
+  verdict: PASS

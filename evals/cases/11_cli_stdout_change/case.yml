@@ -1,0 +1,17 @@
+name: cli_stdout_change
+surface: cli
+description: "The success message text changes; exit code stays 0."
+mutations:
+    - file: deploy.py
+      find: |-
+        print("Deployment complete")
+      replace: |-
+        print("Deployment finished successfully")
+expect:
+  changes:
+    - surface: cli
+      target: "deploy"
+      category: stdout_changed
+      classification: uncertain
+      severity: low
+  verdict: REVIEW

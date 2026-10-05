@@ -1,0 +1,6 @@
+name: http_timestamp_noise
+surface: http
+description: "No code change; the response carries a live epoch timestamp that must normalize away."
+expect:
+  changes: []
+  verdict: PASS

@@ -1,0 +1,7 @@
+# Normalize line endings: LF in the repository everywhere.
+* text=auto eol=lf
+
+# Windows scripts that genuinely need CRLF would be listed here; the project
+# currently has none (probe/server fixtures run on LF fine).
+*.png binary
+*.ico binary

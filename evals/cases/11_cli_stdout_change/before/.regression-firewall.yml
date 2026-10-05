@@ -1,0 +1,12 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: true
+    probes:
+      - id: deploy
+        command: ["python", "deploy.py"]
+        files: ["receipt.txt"]
+  public_api:
+    enabled: false

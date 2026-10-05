@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Test / tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+
+# Regression Firewall artifacts (baselines are machine-local and may contain
+# raw response data). The configuration file .regression-firewall.yml IS tracked.
+.regression-firewall/
+
+# Eval run outputs
+evals/results/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

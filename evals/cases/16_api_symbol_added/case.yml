@@ -1,0 +1,23 @@
+name: api_symbol_added
+surface: public_api
+description: "A new public function ping is added (additive, informational)."
+mutations:
+    - file: samplelib/__init__.py
+      find: |-
+        def connect(host, port=5432):
+            return (host, port)
+      replace: |-
+        def connect(host, port=5432):
+            return (host, port)
+        
+        
+        def ping():
+            return "pong"
+expect:
+  changes:
+    - surface: public_api
+      target: "samplelib.ping"
+      category: symbol_added
+      classification: uncertain
+      severity: info
+  verdict: PASS

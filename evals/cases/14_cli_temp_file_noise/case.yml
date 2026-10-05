@@ -1,0 +1,6 @@
+name: cli_temp_file_noise
+surface: cli
+description: "No code change; the script prints a temp path containing a fresh PID that must normalize away."
+expect:
+  changes: []
+  verdict: PASS

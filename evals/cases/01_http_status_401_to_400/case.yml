@@ -1,0 +1,17 @@
+name: http_status_401_to_400
+surface: http
+description: "Login endpoint starts returning 400 instead of 401 for bad credentials."
+mutations:
+    - file: server.py
+      find: |-
+        self._send(401, {"error": "invalid_credentials"})
+      replace: |-
+        self._send(400, {"error": "invalid_credentials"})
+expect:
+  changes:
+    - surface: http
+      target: "POST /login"
+      category: status_changed
+      classification: unexpected
+      severity: high
+  verdict: BLOCK

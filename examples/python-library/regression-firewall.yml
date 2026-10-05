@@ -1,0 +1,39 @@
+version: 1
+
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: false
+
+  public_api:
+    enabled: true
+    probes:
+      - id: samplelib
+        module: samplelib
+        include_private: false
+
+ignore:
+  headers: [date, content-length]
+  json_paths: []
+
+normalization:
+  uuid: true
+  iso_datetime: true
+  epoch_timestamps: true
+  request_ids: true
+  tokens: true
+  temp_paths: true
+  durations: true
+  float_precision: true
+  whitespace: true
+  ansi: true
+
+thresholds:
+  review_score: 30
+  block_score: 70
+  block_on_high: true
+
+report:
+  markdown: true
+  json: true

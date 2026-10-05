@@ -1,0 +1,24 @@
+name: cli_exit_code_regression
+surface: cli
+description: "deploy.py starts failing: exit 0 -> 1 and the success message becomes a failure message."
+mutations:
+    - file: deploy.py
+      find: |-
+        print("Deployment complete")
+            return 0
+      replace: |-
+        print("Deployment failed")
+            return 1
+expect:
+  changes:
+    - surface: cli
+      target: "deploy"
+      category: exit_code_changed
+      classification: unexpected
+      severity: high
+    - surface: cli
+      target: "deploy"
+      category: stdout_changed
+      classification: uncertain
+      severity: low
+  verdict: BLOCK

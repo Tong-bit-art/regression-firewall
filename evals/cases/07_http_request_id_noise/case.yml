@@ -1,0 +1,6 @@
+name: http_request_id_noise
+surface: http
+description: "No code change; each response carries a fresh X-Request-ID that must normalize away."
+expect:
+  changes: []
+  verdict: PASS

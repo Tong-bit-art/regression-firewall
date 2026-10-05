@@ -1,0 +1,18 @@
+name: http_field_type_changed
+surface: http
+description: "Response field age changes from number to string."
+mutations:
+    - file: server.py
+      find: |-
+        "age": 30,
+      replace: |-
+        "age": "30",
+expect:
+  changes:
+    - surface: http
+      target: "GET /users/42"
+      category: field_type_changed
+      path: "$.age"
+      classification: unexpected
+      severity: medium
+  verdict: REVIEW

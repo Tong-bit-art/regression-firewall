@@ -1,0 +1,17 @@
+name: api_signature_changed
+surface: public_api
+description: "connect() drops the default for port and gains a timeout parameter."
+mutations:
+    - file: samplelib/__init__.py
+      find: |-
+        def connect(host, port=5432):
+      replace: |-
+        def connect(host, port, timeout=30):
+expect:
+  changes:
+    - surface: public_api
+      target: "samplelib.connect"
+      category: signature_changed
+      classification: unexpected
+      severity: medium
+  verdict: REVIEW

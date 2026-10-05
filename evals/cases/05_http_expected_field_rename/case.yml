@@ -1,0 +1,35 @@
+name: http_expected_field_rename
+surface: http
+description: "username is renamed to display_name; the intent file records both sides."
+mutations:
+    - file: server.py
+      find: |-
+        "username": "alice",
+      replace: |-
+        "display_name": "alice",
+intent:
+  task: "Rename username to display_name in the user response."
+  expected_changes:
+    - surface: http
+      target: "GET /users/42"
+      category: field_removed
+      path: "username"
+      note: "renamed to display_name"
+    - surface: http
+      target: "GET /users/42"
+      category: field_added
+      path: "display_name"
+      note: "renamed from username"
+expect:
+  changes:
+    - surface: http
+      target: "GET /users/42"
+      category: field_removed
+      path: "$.username"
+      classification: expected
+    - surface: http
+      target: "GET /users/42"
+      category: field_added
+      path: "$.display_name"
+      classification: expected
+  verdict: PASS

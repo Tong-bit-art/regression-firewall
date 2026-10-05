@@ -1,0 +1,45 @@
+name: multiple_regressions
+surface: mixed
+description: "One task breaks three behaviors: login status, user payload field, and deploy exit code."
+mutations:
+    - file: server.py
+      find: |-
+        self._send(401, {"error": "invalid_credentials"})
+      replace: |-
+        self._send(400, {"error": "invalid_credentials"})
+    - file: server.py
+      find: |-
+        "username": "alice", "email": "alice@example.com",
+      replace: |-
+        "username": "alice",
+    - file: deploy.py
+      find: |-
+        print("Deployment complete")
+            return 0
+      replace: |-
+        print("Deployment failed")
+            return 1
+expect:
+  changes:
+    - surface: http
+      target: "POST /login"
+      category: status_changed
+      classification: unexpected
+      severity: high
+    - surface: http
+      target: "GET /users/42"
+      category: field_removed
+      path: "$.email"
+      classification: unexpected
+      severity: high
+    - surface: cli
+      target: "deploy"
+      category: exit_code_changed
+      classification: unexpected
+      severity: high
+    - surface: cli
+      target: "deploy"
+      category: stdout_changed
+      classification: uncertain
+      severity: low
+  verdict: BLOCK

@@ -1,0 +1,22 @@
+name: cli_generated_file
+surface: cli
+description: "deploy.py starts writing receipt.txt, which is on the watch list."
+mutations:
+    - file: deploy.py
+      find: |-
+        print("Deployment complete")
+            return 0
+      replace: |-
+        print("Deployment complete")
+            with open("receipt.txt", "w") as f:
+                f.write("receipt ok")
+            return 0
+expect:
+  changes:
+    - surface: cli
+      target: "deploy"
+      category: file_created
+      path: "receipt.txt"
+      classification: uncertain
+      severity: medium
+  verdict: REVIEW

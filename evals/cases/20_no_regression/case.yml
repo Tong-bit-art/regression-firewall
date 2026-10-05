@@ -1,0 +1,6 @@
+name: no_regression
+surface: cli
+description: "No code change and deterministic output; the tool must report a clean PASS."
+expect:
+  changes: []
+  verdict: PASS

@@ -1,0 +1,17 @@
+name: http_content_type_change
+surface: http
+description: "GET /users/42 switches from a JSON payload to plain text."
+mutations:
+    - file: server.py
+      find: |-
+        self._send(200, {"id": 42, "username": "alice", "email": "alice@example.com", "timestamp": "2026-01-01T10:00:00Z"})
+      replace: |-
+        self._send(200, "user 42: alice", "text/plain")
+expect:
+  changes:
+    - surface: http
+      target: "GET /users/42"
+      category: content_type_changed
+      classification: unexpected
+      severity: medium
+  verdict: REVIEW

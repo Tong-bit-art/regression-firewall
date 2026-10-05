@@ -1,0 +1,20 @@
+name: cli_stderr_change
+surface: cli
+description: "A deprecation warning appears on stderr; stdout and exit code unchanged."
+mutations:
+    - file: deploy.py
+      find: |-
+        print("Starting deployment")
+            return 0
+      replace: |-
+        print("Starting deployment")
+            print("warning: the --force flag is deprecated", file=sys.stderr)
+            return 0
+expect:
+  changes:
+    - surface: cli
+      target: "deploy"
+      category: stderr_changed
+      classification: uncertain
+      severity: low
+  verdict: REVIEW

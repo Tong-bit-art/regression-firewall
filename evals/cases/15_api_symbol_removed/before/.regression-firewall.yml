@@ -1,0 +1,11 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: false
+  public_api:
+    enabled: true
+    probes:
+      - id: samplelib
+        module: samplelib

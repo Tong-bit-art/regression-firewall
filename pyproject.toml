@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "regression-firewall"
+version = "0.1.0"
+description = "A behavioral regression safety layer for AI coding agents."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Regression Firewall Contributors" }]
+keywords = [
+    "ai-agents",
+    "regression",
+    "testing",
+    "developer-tools",
+    "code-review",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+# flask: fixture servers in tests/integration start real HTTP apps.
+dev = ["pytest>=7.0", "flask>=3.0"]
+
+[project.scripts]
+regression-firewall = "regression_firewall.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["regression_firewall*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

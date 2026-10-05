@@ -1,0 +1,17 @@
+version: 1
+
+surfaces:
+  http:
+    enabled: false
+
+  cli:
+    enabled: true
+    probes:
+      - id: "deploy --env prod"
+        command: ["python", "deploy.py", "--env", "prod"]
+        files: ["out/deploy_receipt.json"]
+      - id: "deploy --help"
+        command: ["python", "deploy.py", "--help"]
+
+  public_api:
+    enabled: false

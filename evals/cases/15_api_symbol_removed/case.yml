@@ -1,0 +1,19 @@
+name: api_symbol_removed
+surface: public_api
+description: "Public class RetryPolicy is removed from the package."
+mutations:
+    - file: samplelib/__init__.py
+      find: |-
+        class RetryPolicy:
+            def __init__(self, attempts=5):
+                self.attempts = attempts
+      replace: |-
+        
+expect:
+  changes:
+    - surface: public_api
+      target: "samplelib.RetryPolicy"
+      category: symbol_removed
+      classification: unexpected
+      severity: critical
+  verdict: BLOCK

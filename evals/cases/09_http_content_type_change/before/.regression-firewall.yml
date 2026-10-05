@@ -1,0 +1,19 @@
+version: 1
+surfaces:
+  http:
+    enabled: true
+    server:
+      command: ["python", "server.py"]
+    base_url: "http://127.0.0.1:{port}"
+    probes:
+      - id: "POST /login"
+        method: POST
+        path: /login
+        body: {"username": "alice", "password": "wrong"}
+      - id: "GET /users/42"
+        method: GET
+        path: /users/42
+  cli:
+    enabled: false
+  public_api:
+    enabled: false
