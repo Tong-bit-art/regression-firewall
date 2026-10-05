@@ -254,12 +254,16 @@ Reproduce with `python -m evals.runner`. Methodology:
 - **Probes run your code.** Public-API introspection imports your package in
   a short-lived subprocess; HTTP servers are started as configured. Don't
   point it at production.
-- **Platform status:** Windows 10/11 — **tested locally** (full suite).
-  Ubuntu and macOS — **designed compatible** (pathlib/argv-only, no Unix
-  assumptions); CI is configured for Windows + Ubuntu + macOS on Python
-  3.11/3.12/3.13, but **remote CI has not been run yet** (no public
-  repository at time of writing). Python 3.14 also passes the full suite
-  locally.
+- **Platform status:**
+  - Ubuntu — **tested via GitHub Actions** on Python 3.11/3.12/3.13 (all green).
+  - Windows — **tested via GitHub Actions** on Python 3.12/3.13 (all green),
+    plus local Windows 11 verification on Python 3.11 and 3.14.
+  - macOS — **CI-verified blocked by a runner-environment issue** we are
+    still debugging (managed HTTP servers start but loopback connections
+    from the test process time out on `macos-latest`; diagnostics are
+    built in and investigation continues). macOS remains
+    *designed compatible*, not yet CI-verified.
+  - Python 3.14 additionally passes the full suite locally.
 
 ## Roadmap
 

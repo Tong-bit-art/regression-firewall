@@ -98,6 +98,33 @@ static review) was run against the completed V0.1 before publish.
 - Audit harness re-run: privacy probe 0 leaks; FP loops 0/10 CLI, 0/5 HTTP;
   stale-bytecode and binary scenarios green; clean-venv install loop green.
 
+## 2026-10-05 — Git repo + first real remote CI runs
+
+Repository initialized and pushed to
+`github.com/Tong-bit-art/regression-firewall` (private for now — public
+release is gated on real-world validation). Five remote Actions runs
+executed before the free Actions quota ran out on the private repo
+(macOS minutes bill at 10x).
+
+**Remote-verified so far**
+- Ubuntu 3.11/3.12/3.13: green (runs 2-4).
+- Windows 3.12/3.13: green (run 4), after fixing a real cross-platform bug:
+  the wheel-install step used a glob that PowerShell does not expand
+  ("Invalid wheel filename").
+- macOS: NOT verified. Every managed HTTP-server start times out (30s) on
+  `macos-latest`: the child stays alive, silent, and loopback connects from
+  the test process SYN-timeout (dropped, not refused). Diagnostics added to
+  the tool (`PYTHONUNBUFFERED`, child `ps` state, `lsof` port probe, effective
+  proxies) and a CI debug step (socketfilterfw state + minimal loopback
+  roundtrip) are ready for the next run. Also fixed en route: HTTP probes
+  and readiness polls now bypass proxy configuration (`ProxyHandler({})`) —
+  correct on any machine where a system proxy would otherwise capture
+  127.0.0.1 traffic.
+
+**Blocked on**: Actions quota (billing). Next step once unblocked (public
+repo or raised limit): re-run, read the macOS diagnostics, fix the runner
+issue, get the matrix fully green.
+
 ## 2026-10-04 — V0.1 build
 
 **Completed**
