@@ -60,11 +60,7 @@ def _run_probe(probe, base_url: str, redact_secrets: bool = True) -> ProbeCaptur
 
     request = urllib.request.Request(url, data=body, headers=headers, method=probe.method)
     try:
-        if probe.follow_redirects:
-            response = urllib.request.urlopen(request, timeout=probe.timeout)
-        else:
-            opener = _build_no_redirect_opener()
-            response = opener.open(request, timeout=probe.timeout)
+        response = _opener(probe.follow_redirects).open(request, timeout=probe.timeout)
     except urllib.error.HTTPError as exc:
         response = exc  # a 4xx/5xx is a captured response, not a transport failure
     except (urllib.error.URLError, OSError, TimeoutError) as exc:
@@ -80,9 +76,15 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None  # makes the opener surface 3xx as HTTPError instead of following
 
 
-def _build_no_redirect_opener():
-    # 3xx responses arrive as HTTPError so redirect behavior stays observable.
-    return urllib.request.build_opener(_NoRedirect)
+def _opener(follow_redirects: bool):
+    """Opener for probing local servers: proxies disabled (a macOS system
+    proxy config would otherwise route 127.0.0.1 requests through it and
+    break probes and readiness checks); redirects optionally surfaced as
+    HTTPError so redirect behavior stays observable."""
+    handlers = [urllib.request.ProxyHandler({})]
+    if not follow_redirects:
+        handlers.append(_NoRedirect)
+    return urllib.request.build_opener(*handlers)
 
 
 def _encode_body(probe):
@@ -190,6 +192,7 @@ class ManagedServer:
 
         deadline = time.monotonic() + self.cfg.ready_timeout
         ready_url = base_url.rstrip("/") + self.cfg.ready_path
+        poll_opener = _opener(follow_redirects=True)
         while time.monotonic() < deadline:
             if self._proc.poll() is not None:
                 exit_code = self._proc.returncode
@@ -199,7 +202,7 @@ class ManagedServer:
                     f"log tail: {_log_tail(self.log_path)}"
                 )
             try:
-                urllib.request.urlopen(ready_url, timeout=2)
+                poll_opener.open(ready_url, timeout=2)
                 return base_url  # any response means the server is up
             except urllib.error.HTTPError:
                 return base_url  # an error status still proves the server is up

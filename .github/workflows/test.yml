@@ -37,6 +37,7 @@ jobs:
           python -m build
 
       - name: Install from wheel (clean path)
+        shell: bash # Windows runners default to PowerShell, which does not expand globs
         run: pip install dist/regression_firewall-*.whl
 
       - name: Install dev tools
