@@ -181,6 +181,9 @@ class ManagedServer:
         # Stale bytecode must never be served: a same-size, same-second edit
         # would otherwise pass pyc validation and produce a false PASS.
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        # Unbuffered so startup banners/tracebacks reach the log file even
+        # when the process is later killed while still alive.
+        env["PYTHONUNBUFFERED"] = "1"
         self._log = open(self.log_path, "w", encoding="utf-8")
         self._proc = subprocess.Popen(
             command,
@@ -209,10 +212,11 @@ class ManagedServer:
             except (urllib.error.URLError, OSError, TimeoutError):
                 time.sleep(0.25)
 
+        diagnostics = _startup_diagnostics(base_url, self.port, self.log_path)
         self.stop()
         raise CaptureError(
             f"server did not become ready within {self.cfg.ready_timeout:g}s "
-            f"(polling {ready_url}); log tail: {_log_tail(self.log_path)}"
+            f"(polling {ready_url}); {diagnostics}"
         )
 
     def stop(self) -> None:
@@ -243,6 +247,37 @@ def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
+
+def _startup_diagnostics(base_url: str, port: int | None, log_path: Path) -> str:
+    """Facts collected when readiness times out: is the process listening on
+    the expected port at the raw-TCP level, and what did it actually print?
+    This distinguishes 'child never bound' from 'bound but urllib cannot
+    reach it' (e.g. host-level proxy/firewall interference)."""
+    import socket
+
+    parts = [f"log tail: {_log_tail(log_path)}"]
+    if port is None:
+        parts.append("port: external (no {port} template)")
+        return "; ".join(parts)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    try:
+        sock.connect(("127.0.0.1", port))
+        parts.append(f"raw TCP connect to 127.0.0.1:{port}: SUCCESS (server is listening; "
+                     "readiness poll failed above the TCP level)")
+    except OSError as exc:
+        parts.append(f"raw TCP connect to 127.0.0.1:{port}: FAILED ({exc}) "
+                     "(server never bound the expected port)")
+    finally:
+        sock.close()
+    try:
+        import urllib.request as _u
+
+        parts.append(f"effective urllib proxies: {_u.getproxies() or 'none'}")
+    except Exception:  # noqa: BLE001 - diagnostics must never break the error path
+        pass
+    return "; ".join(parts)
 
 
 def _log_tail(path: Path, limit: int = 40) -> str:
