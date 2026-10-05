@@ -55,3 +55,6 @@ First release. Core workflow: `baseline` → (code + intent) → `check`.
   false positives in no-change stability loops).
 - CI matrix (Ubuntu/Windows/macOS, Python 3.11–3.13) including a
   build-and-install-from-wheel step; `flask` declared as a dev dependency.
+- Full matrix verified green on real GitHub Actions runners, including
+  macOS (where fixture servers were fixed to avoid a 35s reverse-DNS hang
+  in `HTTPServer.server_bind` on runner VMs).

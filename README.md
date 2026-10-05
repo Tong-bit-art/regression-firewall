@@ -188,6 +188,11 @@ the agent's rules/instructions. The skill teaches the agent the workflow
 Zero config works — defaults enable all surfaces; you add probes. Highlights:
 
 ```yaml
+surfaces:
+  http:
+    ready_timeout: 30     # seconds to wait for the managed server; raise
+                          # it if your server resolves DNS slowly on bind
+
 thresholds:
   review_score: 30        # REVIEW at or above this score
   block_score: 70         # BLOCK at or above this score
@@ -255,14 +260,9 @@ Reproduce with `python -m evals.runner`. Methodology:
   a short-lived subprocess; HTTP servers are started as configured. Don't
   point it at production.
 - **Platform status:**
-  - Ubuntu — **tested via GitHub Actions** on Python 3.11/3.12/3.13 (all green).
-  - Windows — **tested via GitHub Actions** on Python 3.12/3.13 (all green),
-    plus local Windows 11 verification on Python 3.11 and 3.14.
-  - macOS — **CI-verified blocked by a runner-environment issue** we are
-    still debugging (managed HTTP servers start but loopback connections
-    from the test process time out on `macos-latest`; diagnostics are
-    built in and investigation continues). macOS remains
-    *designed compatible*, not yet CI-verified.
+  - Ubuntu, Windows, macOS — **tested via GitHub Actions**
+    (Windows/macOS on Python 3.12/3.13, Ubuntu on 3.11/3.12/3.13 —
+    all green).
   - Python 3.14 additionally passes the full suite locally.
 
 ## Roadmap

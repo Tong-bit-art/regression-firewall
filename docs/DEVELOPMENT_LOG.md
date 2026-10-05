@@ -121,9 +121,24 @@ executed before the free Actions quota ran out on the private repo
   correct on any machine where a system proxy would otherwise capture
   127.0.0.1 traffic.
 
-**Blocked on**: Actions quota (billing). Next step once unblocked (public
-repo or raised limit): re-run, read the macOS diagnostics, fix the runner
-issue, get the matrix fully green.
+**Blocked on** (resolved): Actions quota on the private repo. The user
+made the repository public (free Actions minutes) and the suite was
+re-run.
+
+**macOS root cause — CONFIRMED with in-run evidence**
+The CI debug step measured `socket.getfqdn("127.0.0.1")` at **35.01s** on
+macos-latest (reverse DNS hang in the runner VM's resolver). http.server's
+`HTTPServer.server_bind()` (and therefore werkzeug/Flask) calls getfqdn
+between bind() and listen(), so every managed fixture server sat in the
+resolver past the 30s readiness timeout — child alive, silent, port bound
+but not listening. Fix: fixture servers (eval cases, integration tests,
+flask example) override `server_bind` / neutralize `getfqdn`; nothing in
+the probe path needs `server_name`. Real-world servers hit by the same
+condition can raise `surfaces.http.ready_timeout`.
+
+**Final status: 7/7 matrix green** (Ubuntu 3.11/3.12/3.13, Windows
+3.12/3.13, macOS 3.12/3.13) — remote cross-platform verification
+complete.
 
 ## 2026-10-04 — V0.1 build
 
