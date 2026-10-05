@@ -1,6 +1,14 @@
 import json, os, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    # HTTPServer.server_bind() does a reverse-DNS lookup (socket.getfqdn)
+    # that can hang for minutes on hosts with broken resolvers (observed on
+    # GitHub macOS runners). Nothing in the probe path needs server_name.
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload, ctype="application/json"):
         body = json.dumps(payload).encode() if isinstance(payload, (dict, list)) else str(payload).encode()
@@ -30,4 +38,4 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()

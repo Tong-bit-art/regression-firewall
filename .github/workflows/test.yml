@@ -71,6 +71,9 @@ jobs:
                   c.close()
               time.sleep(0.5)
           srv.close()
+          t0 = time.monotonic()
+          socket.getfqdn("127.0.0.1")
+          print(f"getfqdn(127.0.0.1) took {time.monotonic()-t0:.2f}s")
           PY
 
       - name: Run tests (unit + integration + evals)

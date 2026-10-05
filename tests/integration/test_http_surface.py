@@ -23,6 +23,13 @@ SERVER_V1 = """\
 import json, os, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    # skip the reverse-DNS lookup in HTTPServer.server_bind (hangs on hosts
+    # with broken resolvers, e.g. GitHub macOS runners)
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload):
         body = json.dumps(payload).encode()
@@ -48,7 +55,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 """
 
 

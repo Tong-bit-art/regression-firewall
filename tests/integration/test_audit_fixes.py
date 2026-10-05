@@ -40,6 +40,8 @@ surfaces:
 
 PRIVACY_SERVE = """\
 import os
+import socket
+socket.getfqdn = lambda *a, **k: "127.0.0.1"  # skip reverse DNS (hangs on macOS CI)
 from app import app
 
 if __name__ == "__main__":
@@ -115,6 +117,11 @@ def test_ignore_json_paths_suppress_structural_changes(project, run_rf, write):
 import json, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload):
         body = json.dumps(payload).encode()
@@ -132,7 +139,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 ''')
     write(project / ".regression-firewall.yml", """\
 version: 1
@@ -157,6 +164,11 @@ ignore:
 import json, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload):
         body = json.dumps(payload).encode()
@@ -174,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 ''')
     proc = run_rf(["check"], project)
     report = read_report(project)
@@ -190,6 +202,11 @@ def test_binary_body_change_detected(project, run_rf, write):
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         body = b"\\x00\\x01BINARY"
@@ -204,7 +221,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 '''
     server_v2 = server_v1.replace('b"\\x00\\x01BINARY"', 'b"\\x00\\x01BINARY-LONGER"')
     write(project / "server.py", server_v1)

@@ -164,6 +164,8 @@ def all_secrets():
     })
 '''
     serve = '''import os
+import socket
+socket.getfqdn = lambda *a, **k: "127.0.0.1"  # skip reverse DNS (hangs on macOS CI)
 from app import app
 
 if __name__ == "__main__":
@@ -228,6 +230,11 @@ def test_no_change_stability_http_10x(project, run_rf, write):
 import json, os, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload):
         body = json.dumps(payload).encode()
@@ -248,7 +255,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 '''
     write(project / "server.py", server)
     write(project / ".regression-firewall.yml", """\
