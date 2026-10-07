@@ -45,7 +45,7 @@ def test_api_runner_module_import_uses_isolated_cwd(tmp_path):
     assert payload["symbols"]["BENCHMARK_CONST"]["kind"] == "int"
 
 
-def test_canonical_signature_deterministic_across_subprocesses():
+def test_canonical_signature_deterministic_across_subprocesses(tmp_path):
     """P0 fix: framework-generated callables must produce the same canonical
     fingerprint across subprocess invocations. Uses a synthetic class with
     volatile default reprs (simulating typer.Typer's Doc() issue) so it runs
