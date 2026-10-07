@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-07T13:12:17+00:00",
+  "isolation": "local-scrubbed-env",
+  "tool_version": "0.1.0",
+  "python_version": "3.11.9",
+  "os": "Windows-10-10.0.26200-SP0",
+  "manifest_hash": "71cc688d93e8b1c0ba51b5bcb4399cdf8cb2a598",
+  "metrics": {
+    "cases_total": 1,
+    "cases_ran_to_verdict": 0,
+    "repository_setup_failures": 1,
+    "infrastructure_failures": 0,
+    "mutation_failures": 0,
+    "timeouts": 0,
+    "planted_regression_cases": 0,
+    "detected_regressions": 0,
+    "missed_regressions": 0,
+    "false_positives": 0,
+    "noise_or_control_cases": 0,
+    "noise_or_control_clean": 0,
+    "detection_recall": null,
+    "false_positive_rate": null,
+    "severity_accuracy": null,
+    "verdict_accuracy": null
+  },
+  "cases": [
+    {
+      "repo_id": "urllib3",
+      "case_id": "urllib3_verify",
+      "case_type": "verify",
+      "case_class": "REPOSITORY_SETUP_FAILURE",
+      "expected_verdict": "",
+      "detected_verdict": "",
+      "verdict_ok": false,
+      "missing": [],
+      "extras": [],
+      "false_positive_count": 0,
+      "severity_checked": false,
+      "severity_ok": false,
+      "note": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'urllib3'\n",
+      "duration_s": 0.0
+    }
+  ],
+  "notes": [
+    "FRESH FINAL HOLDOUT — independent of all development and validation work.",
+    "Frozen implementation: 8428a5b13cdd9d54807ee17a23ddbaef61173454",
+    "Run ONCE. Original results are final regardless of pass/fail."
+  ]
+}

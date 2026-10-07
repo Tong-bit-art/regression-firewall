@@ -315,8 +315,6 @@ repos:
         probes:
         - id: typer
           module: typer
-  clean_excludes:
-  - typer_benchmark_marker.txt
 - id: httpie
   repo_url: https://github.com/httpie/cli
   commit_sha: 5b604c37c6
@@ -357,8 +355,6 @@ repos:
           - httpie_benchmark_marker.txt
       public_api:
         enabled: false
-  clean_excludes:
-  - httpie_benchmark_marker.txt
 - id: pip-tools
   repo_url: https://github.com/jazzband/pip-tools
   commit_sha: 28538e4385
@@ -399,5 +395,3 @@ repos:
           - piptools_benchmark_marker.txt
       public_api:
         enabled: false
-  clean_excludes:
-  - piptools_benchmark_marker.txt

@@ -20,7 +20,12 @@ repos:
   split: holdout
   project_root: .
   setup_commands:
-  - -m pip install --quiet -e .
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
   verify_command: ["{venv_python}", "-c", "import bottle; print(bottle.__version__)"]
   supported_surfaces: [public_api]
   known_requirements: "no third-party dependencies"
@@ -43,7 +48,12 @@ repos:
   split: holdout
   project_root: .
   setup_commands:
-  - -m pip install --quiet -e .
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
   verify_command: ["{venv_python}", "-c", "import urllib3; print(urllib3.__version__)"]
   supported_surfaces: [public_api]
   known_requirements: "certifi/idna installed transitively"
@@ -66,7 +76,12 @@ repos:
   split: holdout
   project_root: .
   setup_commands:
-  - -m pip install --quiet -e .
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
   verify_command: ["{venv_python}", "-c", "from packaging.version import parse; print(parse('1.0'))"]
   supported_surfaces: [public_api]
   known_requirements: "no third-party dependencies"
@@ -80,3 +95,5 @@ repos:
         probes:
         - id: packaging
           module: packaging
+        - id: packaging.version
+          module: packaging.version

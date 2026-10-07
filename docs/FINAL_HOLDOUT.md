@@ -2,7 +2,10 @@
 
 **Frozen implementation commit:** `8428a5b13cdd9d54807ee17a23ddbaef61173454`
 **Frozen date:** 2026-10-07
-**Status:** NOT YET RUN — will be run exactly ONCE
+**Status:** RUN ONCE (original results in `docs/FINAL_EVIDENCE_REPORT.md`);
+post-fix validation appended 2026-10-07; **this holdout is consumed** — per
+the rules below it moves to the validation corpus, and a NEW fresh holdout
+must be selected before the next release cycle.
 
 ## Selection criteria
 
@@ -41,3 +44,32 @@ Ground truth was authored before the first run and stored in
   move this holdout to the validation corpus, and select a NEW fresh holdout.
 - Do NOT re-run after fixes and call it a holdout.
 - Do NOT modify ground truth after seeing results.
+
+## Post-fix validation (2026-10-07, later same day)
+
+Re-running the same mutations after fixes is **post-fix validation, not a
+holdout**. It is recorded separately and must not be cited as holdout
+numbers. Result: **7/7 per repo — 3/3 planted regressions detected, 0 false
+positives** (bottle, urllib3, packaging).
+
+Benchmark fixes applied before this re-run (recorded in full; no
+ground-truth tuning):
+
+1. `manifest-holdout.yaml` wrote `setup_commands` as a plain string; the
+   runner iterated it character-by-character into `python -` (empty stdin →
+   exit 0 → silent no-install). Bottle only survived because it is a single
+   file at the repo root. Fixed to argv lists; the runner now rejects string
+   commands loudly.
+2. The per-case restore (`git clean -fdqx`) deleted build-generated files
+   (urllib3's `src/urllib3/_version.py`), breaking every later capture. The
+   runner now re-applies the repo setup per case.
+3. The packaging probes covered only the top-level `packaging` module while
+   the mutations edit `packaging.version`; the missing probe was added.
+4. Tool fixes (not ground truth): standard src-layout import root;
+   unresolvable `__all__` entries classified as removals; module-dict
+   enumeration behind restrictive `__dir__`; no-evidence guard (a probe that
+   fails at both baseline and check can no longer PASS silently).
+5. The original urllib3 signature mutation inserted a second `*` into the
+   signature and produced a SyntaxError (invalid code). It was corrected
+   (insert the required keyword-only parameter after the existing `*,`).
+   The ORIGINAL holdout result for that case (miss) stands as recorded.

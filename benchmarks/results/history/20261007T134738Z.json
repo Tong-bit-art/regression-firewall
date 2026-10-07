@@ -1,216 +1,45 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T14:15:04+00:00",
+  "generated_at": "2026-10-07T13:47:38+00:00",
   "isolation": "local-scrubbed-env",
   "tool_version": "0.1.0",
   "python_version": "3.11.9",
   "os": "Windows-10-10.0.26200-SP0",
-  "manifest_hash": "e87c38e2a3e71c90b7beba64a0255c6e6502c787",
+  "manifest_hash": "01783501dfa46638d3ec70565924818f0feaf2db",
   "metrics": {
-    "cases_total": 66,
-    "cases_ran_to_verdict": 66,
-    "repository_setup_failures": 0,
+    "cases_total": 56,
+    "cases_ran_to_verdict": 55,
+    "repository_setup_failures": 1,
     "infrastructure_failures": 0,
     "mutation_failures": 0,
     "timeouts": 0,
-    "planted_regression_cases": 29,
-    "detected_regressions": 29,
-    "missed_regressions": 0,
+    "planted_regression_cases": 24,
+    "detected_regressions": 22,
+    "missed_regressions": 2,
     "false_positives": 0,
-    "noise_or_control_cases": 37,
-    "noise_or_control_clean": 37,
-    "detection_recall": 1.0,
+    "noise_or_control_cases": 31,
+    "noise_or_control_clean": 31,
+    "detection_recall": 0.9167,
     "false_positive_rate": 0.0,
     "severity_accuracy": 1.0,
-    "verdict_accuracy": 1.0
+    "verdict_accuracy": 0.9636
   },
   "cases": [
     {
       "repo_id": "flaskr",
-      "case_id": "flaskr_ctl_no_change#1",
-      "case_type": "no_change_control",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
+      "case_id": "flaskr_setup",
+      "case_type": "setup",
+      "case_class": "REPOSITORY_SETUP_FAILURE",
+      "expected_verdict": "",
+      "detected_verdict": "",
+      "verdict_ok": false,
       "missing": [],
       "extras": [],
       "false_positive_count": 0,
       "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.14
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_ctl_no_change#2",
-      "case_type": "no_change_control",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.0
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_ctl_no_change#3",
-      "case_type": "no_change_control",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 3.98
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_ctl_non_behavior",
-      "case_type": "non_behavior_change_control",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.12
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_02_status_200_to_500",
-      "case_type": "status_200_to_500",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "BLOCK",
-      "detected_verdict": "BLOCK",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [
-        "http/GET //value_changed (uncertain/low)"
-      ],
-      "false_positive_count": 0,
-      "severity_checked": true,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.3
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_01_status_redirect_to_400",
-      "case_type": "status_redirect_to_400",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "BLOCK",
-      "detected_verdict": "BLOCK",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [
-        "http/GET /1/update/header_changed (uncertain/low)",
-        "http/GET /1/update/value_changed (uncertain/low)"
-      ],
-      "false_positive_count": 0,
-      "severity_checked": true,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.12
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_07_header_change",
-      "case_type": "header_change",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "REVIEW",
-      "detected_verdict": "REVIEW",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": true,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.17
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_08_timestamp_noise",
-      "case_type": "timestamp_noise",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.05
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_09_request_id_noise",
-      "case_type": "request_id_noise",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.31
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_19_intent_expected_status",
-      "case_type": "intent_expected_status",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [
-        "http/GET /1/update/header_changed (expected/low)",
-        "http/GET /1/update/value_changed (expected/low)"
-      ],
-      "false_positive_count": 0,
-      "severity_checked": false,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.19
-    },
-    {
-      "repo_id": "flaskr",
-      "case_id": "flaskr_20_intent_mismatch_stays_unexpected",
-      "case_type": "intent_mismatch_status",
-      "case_class": "BENCHMARK_PASS",
-      "expected_verdict": "BLOCK",
-      "detected_verdict": "BLOCK",
-      "verdict_ok": true,
-      "missing": [],
-      "extras": [
-        "http/GET /1/update/header_changed (uncertain/low)",
-        "http/GET /1/update/value_changed (uncertain/low)"
-      ],
-      "false_positive_count": 0,
-      "severity_checked": true,
-      "severity_ok": true,
-      "note": "",
-      "duration_s": 4.17
+      "severity_ok": false,
+      "note": "setup step failed (-m flask --app...): py\", line 349, in load_app\n    app = locate_app(import_name, name)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\regfw-bench\\venvs\\flaskr\\Lib\\site-packages\\flask\\cli.py\", line 245, in locate_app\n    __import__(module_name)\n  File \"C:\\regfw-bench\\repos\\flaskr\\examples\\tutorial\\flaskr\\__init__.py\", line 51, in <module>\n    @app.route(\"/api/status\")\n     ^^^\nNameError: name 'app' is not defined\n",
+      "duration_s": 0.0
     },
     {
       "repo_id": "healthchecks",
@@ -226,7 +55,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.73
+      "duration_s": 6.98
     },
     {
       "repo_id": "healthchecks",
@@ -242,7 +71,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.74
+      "duration_s": 7.72
     },
     {
       "repo_id": "healthchecks",
@@ -258,7 +87,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 6.81
     },
     {
       "repo_id": "healthchecks",
@@ -274,7 +103,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.69
+      "duration_s": 8.64
     },
     {
       "repo_id": "healthchecks",
@@ -290,7 +119,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.67
+      "duration_s": 7.55
     },
     {
       "repo_id": "healthchecks",
@@ -312,7 +141,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.84
+      "duration_s": 7.67
     },
     {
       "repo_id": "healthchecks",
@@ -328,7 +157,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 7.48
     },
     {
       "repo_id": "healthchecks",
@@ -344,7 +173,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.64
+      "duration_s": 7.5
     },
     {
       "repo_id": "healthchecks",
@@ -360,7 +189,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.72
+      "duration_s": 7.06
     },
     {
       "repo_id": "healthchecks",
@@ -376,7 +205,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.62
+      "duration_s": 6.81
     },
     {
       "repo_id": "healthchecks",
@@ -392,7 +221,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.69
+      "duration_s": 6.7
     },
     {
       "repo_id": "healthchecks",
@@ -408,7 +237,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.62
+      "duration_s": 6.78
     },
     {
       "repo_id": "healthchecks",
@@ -424,7 +253,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.58
+      "duration_s": 6.72
     },
     {
       "repo_id": "healthchecks",
@@ -440,7 +269,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 6.64
     },
     {
       "repo_id": "requests",
@@ -456,7 +285,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.69
+      "duration_s": 9.5
     },
     {
       "repo_id": "requests",
@@ -472,7 +301,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.56
+      "duration_s": 9.64
     },
     {
       "repo_id": "requests",
@@ -488,7 +317,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.7
+      "duration_s": 9.81
     },
     {
       "repo_id": "requests",
@@ -504,7 +333,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.76
+      "duration_s": 9.77
     },
     {
       "repo_id": "requests",
@@ -523,7 +352,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.81
+      "duration_s": 9.61
     },
     {
       "repo_id": "requests",
@@ -539,7 +368,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.77
+      "duration_s": 9.56
     },
     {
       "repo_id": "requests",
@@ -557,7 +386,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.76
+      "duration_s": 9.61
     },
     {
       "repo_id": "click",
@@ -573,7 +402,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.91
+      "duration_s": 4.95
     },
     {
       "repo_id": "click",
@@ -589,7 +418,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.97
+      "duration_s": 4.78
     },
     {
       "repo_id": "click",
@@ -605,7 +434,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.94
+      "duration_s": 4.88
     },
     {
       "repo_id": "click",
@@ -621,7 +450,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 5.05
+      "duration_s": 4.86
     },
     {
       "repo_id": "click",
@@ -637,7 +466,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.98
+      "duration_s": 4.97
     },
     {
       "repo_id": "click",
@@ -653,7 +482,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.95
+      "duration_s": 4.86
     },
     {
       "repo_id": "click",
@@ -669,7 +498,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.99
+      "duration_s": 4.97
     },
     {
       "repo_id": "sherlock",
@@ -685,7 +514,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.7
+      "duration_s": 8.03
     },
     {
       "repo_id": "sherlock",
@@ -701,7 +530,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.3
+      "duration_s": 7.94
     },
     {
       "repo_id": "sherlock",
@@ -717,7 +546,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.28
+      "duration_s": 7.95
     },
     {
       "repo_id": "sherlock",
@@ -733,7 +562,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.16
+      "duration_s": 7.99
     },
     {
       "repo_id": "sherlock",
@@ -749,7 +578,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.09
+      "duration_s": 8.06
     },
     {
       "repo_id": "sherlock",
@@ -765,7 +594,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.24
+      "duration_s": 8.08
     },
     {
       "repo_id": "sherlock",
@@ -781,7 +610,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.45
+      "duration_s": 7.89
     },
     {
       "repo_id": "sherlock",
@@ -797,7 +626,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.25
+      "duration_s": 7.89
     },
     {
       "repo_id": "sherlock",
@@ -813,7 +642,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.26
+      "duration_s": 8.05
     },
     {
       "repo_id": "typer",
@@ -829,7 +658,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.97
+      "duration_s": 7.08
     },
     {
       "repo_id": "typer",
@@ -845,7 +674,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.84
+      "duration_s": 6.69
     },
     {
       "repo_id": "typer",
@@ -861,7 +690,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.89
+      "duration_s": 6.8
     },
     {
       "repo_id": "typer",
@@ -877,7 +706,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 7.08
+      "duration_s": 6.83
     },
     {
       "repo_id": "typer",
@@ -893,7 +722,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.99
+      "duration_s": 6.88
     },
     {
       "repo_id": "typer",
@@ -909,23 +738,25 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.97
+      "duration_s": 6.88
     },
     {
       "repo_id": "typer",
       "case_id": "typer_13_generated_file",
       "case_type": "generated_file_added",
-      "case_class": "BENCHMARK_PASS",
+      "case_class": "REGRESSION_FIREWALL_FAILURE",
       "expected_verdict": "REVIEW",
-      "detected_verdict": "REVIEW",
-      "verdict_ok": true,
-      "missing": [],
+      "detected_verdict": "PASS",
+      "verdict_ok": false,
+      "missing": [
+        "cli/file_created/uncertain/medium"
+      ],
       "extras": [],
       "false_positive_count": 0,
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.88
+      "duration_s": 6.95
     },
     {
       "repo_id": "httpie",
@@ -941,7 +772,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.38
+      "duration_s": 10.84
     },
     {
       "repo_id": "httpie",
@@ -957,7 +788,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.31
+      "duration_s": 9.59
     },
     {
       "repo_id": "httpie",
@@ -989,7 +820,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.41
+      "duration_s": 9.38
     },
     {
       "repo_id": "httpie",
@@ -1005,23 +836,25 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.27
+      "duration_s": 10.02
     },
     {
       "repo_id": "httpie",
       "case_id": "httpie_13_generated_file",
       "case_type": "generated_file_added",
-      "case_class": "BENCHMARK_PASS",
+      "case_class": "REGRESSION_FIREWALL_FAILURE",
       "expected_verdict": "REVIEW",
-      "detected_verdict": "REVIEW",
-      "verdict_ok": true,
-      "missing": [],
+      "detected_verdict": "PASS",
+      "verdict_ok": false,
+      "missing": [
+        "cli/file_created/uncertain/medium"
+      ],
       "extras": [],
       "false_positive_count": 0,
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.25
+      "duration_s": 9.64
     },
     {
       "repo_id": "pip-tools",
@@ -1037,7 +870,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.64
+      "duration_s": 13.84
     },
     {
       "repo_id": "pip-tools",
@@ -1053,7 +886,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.97
+      "duration_s": 13.89
     },
     {
       "repo_id": "pip-tools",
@@ -1069,7 +902,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.84
+      "duration_s": 13.89
     },
     {
       "repo_id": "pip-tools",
@@ -1085,7 +918,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 14.08
+      "duration_s": 13.81
     },
     {
       "repo_id": "pip-tools",
@@ -1101,7 +934,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 14.09
+      "duration_s": 13.95
     }
   ],
   "notes": [

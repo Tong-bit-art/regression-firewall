@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — release-blocker closure (2026-10-07)
+
+### Added
+
+- **Intent audit trail (P0).** The intent state is recorded at baseline and
+  at every check. Entries that first appear (or are modified) after a
+  previous check already observed the behavior are POST-HOC: they are
+  marked in the report, keep the verdict at REVIEW, and are cumulative
+  until explicitly acknowledged with `check --accept-post-hoc-intent`.
+  An append-only `intent_audit.jsonl` journal backs the audit trail if
+  `report.json` is rotated or deleted; the re-baseline guard reads it too.
+- **No-evidence guard (P0).** A probe that fails at both baseline and check
+  can no longer yield a silent PASS: the verdict is kept at REVIEW and the
+  report says the probe was NOT verified. Failed captures are warned about
+  at capture time as well.
+- `tests/fixtures/src_layout_package/` — minimal standard src-layout fixture
+  with regression coverage for removal/addition/signature/no-op/stability.
+
+### Fixed
+
+- **Standard src-layout public-API coverage (P0).** The introspection
+  subprocess now adds the project's own `src/` root, so `src/<pkg>` projects
+  (urllib3, packaging, …) are captured from the working tree.
+- `symbol_removed` classification for names declared in `__all__` that can
+  no longer be resolved (previously misreported as a signature change).
+- Symbol enumeration now uses the module namespace (`vars`) — modules with a
+  restrictive `__dir__` (e.g. `packaging.version`) no longer hide importable
+  symbols.
+- Benchmark runner: `setup_commands` / `verify_command` / `api_key_command`
+  written as plain strings now fail loudly instead of being iterated
+  character-by-character into `python -` (silent no-op); the repo setup is
+  re-applied after each per-case restore (build-generated files such as
+  urllib3's `_version.py` are recreated); the working tree is restored
+  before setup as well as per case.
+- Benchmark fixture corrections (benchmark hygiene, ground truth preserved):
+  urllib3 signature mutation produced invalid Python (second `*`) and was
+  corrected; packaging probes now cover `packaging.version`.
+
 ## [0.1.0] - 2026-10-04
 
 First release. Core workflow: `baseline` → (code + intent) → `check`.

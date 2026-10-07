@@ -56,6 +56,16 @@ def run_capture(config: Config, project_root: Path, artifacts_dir: Path) -> tupl
         else:
             warnings.append("surface 'public_api' is enabled but no probes are configured")
 
+    # A probe that cannot run at all is not "no change": nothing was verified.
+    # Surface it loudly here so it is visible at baseline time as well.
+    for surface, captures in surfaces.items():
+        for capture in captures:
+            if not capture.ok:
+                warnings.append(
+                    f"probe {capture.target!r} failed to capture: "
+                    f"{capture.error or 'unknown error'}"
+                )
+
     project = detect_project(project_root)
     snapshot = Snapshot(
         schema_version=SNAPSHOT_SCHEMA_VERSION,

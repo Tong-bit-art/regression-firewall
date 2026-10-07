@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import uuid
 from pathlib import Path
 
 from . import __version__
@@ -10,7 +11,10 @@ from .capture.base import run_capture
 from .config.loader import config_hash, find_config_file, load_config
 from .config.schema import ConfigError
 from .diff import diff_surfaces
-from .intent.matcher import classify_change
+from .intent.audit import (append_journal, compute_audit, entry_fingerprint,
+                           intent_state, last_check_from_journal,
+                           load_intent_state, pending_fingerprints)
+from .intent.matcher import classify_change, matching_entries
 from .intent.model import IntentError, load_intent
 from .models.result import CheckResult
 from .models.snapshot import Snapshot
@@ -129,6 +133,13 @@ def main(argv=None) -> int:
     check.add_argument("--config", default=None, help="path to the config file")
     check.add_argument("--intent", default=None,
                        help="path to intent.json (default: .regression-firewall/intent.json)")
+    check.add_argument(
+        "--accept-post-hoc-intent",
+        action="store_true",
+        help="acknowledge intent entries that were added or modified after a previous "
+             "check already observed the behavior (requires explicit user approval; "
+             "the acknowledgement is recorded in the report's intent_audit)",
+    )
 
     report_cmd = subparsers.add_parser("report", help="re-display the latest report")
     report_cmd.add_argument("--format", choices=("console", "markdown", "json"), default="console")
@@ -243,10 +254,18 @@ def cmd_baseline(args, root: Path) -> int:
         return EXIT_ERROR
 
     snapshot, capture_warnings = run_capture(cfg, root, artifacts)
+    snapshot.provenance["intent_at_baseline"] = load_intent_state(artifacts / INTENT_FILENAME)
+    snapshot.provenance["baseline_id"] = uuid.uuid4().hex[:16]
     snapshot.provenance["snapshot_hash"] = snapshot.content_hash()
     if rebaseline_info:
         snapshot.provenance["rebaseline"] = rebaseline_info
     _write_json(artifacts / "baseline.json", snapshot.to_dict())
+    append_journal(artifacts, {
+        "event": "baseline",
+        "at": snapshot.created_at,
+        "baseline_id": snapshot.provenance["baseline_id"],
+        "intent": snapshot.provenance["intent_at_baseline"],
+    })
 
     warnings = warnings + capture_warnings
     print("Regression Firewall — Baseline")
@@ -261,6 +280,10 @@ def cmd_baseline(args, root: Path) -> int:
     if snapshot.probe_count() == 0:
         print("  WARNING: no probes are configured; nothing was captured.")
         print("           Add probes to .regression-firewall.yml and re-run.")
+    intent_snapshot = snapshot.provenance.get("intent_at_baseline") or {}
+    if intent_snapshot.get("exists"):
+        count = len(intent_snapshot.get("entries") or [])
+        print(f"  Intent at baseline: {count} entries recorded for audit")
     for warning in warnings:
         print(f"  WARNING: {warning}")
     git = snapshot.provenance.get("git") or {}
@@ -299,6 +322,13 @@ def _rebaseline_decision(artifacts: Path, force: bool) -> dict:
             previous_verdict = _read_json(report_path).get("verdict")
         except (OSError, json.JSONDecodeError):
             previous_verdict = None
+    if previous_verdict is None and previous is not None:
+        # The report may be missing or rotated; the audit journal records the
+        # verdicts too, so deleting report.json is not a way around the guard.
+        journal = last_check_from_journal(
+            artifacts, (previous.provenance or {}).get("baseline_id"))
+        if journal:
+            previous_verdict = journal.get("verdict")
 
     info = {}
     if previous is not None:
@@ -379,6 +409,16 @@ def cmd_check(args, root: Path) -> int:
     changes, diff_warnings = diff_surfaces(baseline, latest, normalizer, cfg)
     warnings = warnings + capture_warnings + diff_warnings
 
+    # A probe that failed at BOTH baseline and check produces no diff (both
+    # sides are equally unverifiable) — without this guard that reads as a
+    # silent PASS. Nothing was verified, so the result must not be PASS.
+    unverified = _unverified_probes(baseline, latest)
+    for target, error in unverified:
+        warnings.append(
+            f"probe {target!r} could not be captured at baseline or check "
+            f"({error or 'unknown error'}); it was NOT verified"
+        )
+
     config_changed = bool(baseline.config_hash) and baseline.config_hash != config_hash(cfg)
 
     intent_path = Path(args.intent) if args.intent else artifacts / INTENT_FILENAME
@@ -387,10 +427,69 @@ def cmd_check(args, root: Path) -> int:
         return EXIT_ERROR
     intent = load_intent(intent_path)
     warnings.extend(_wildcard_intent_warnings(intent))
+
+    # Intent audit: entries that first appear in a later check than the one
+    # that already observed the behavior are POST-HOC. They stay pending until
+    # explicitly acknowledged with --accept-post-hoc-intent; pending entries
+    # annotate their matches and can never yield a clean PASS.
+    previous_report = None
+    report_path = artifacts / "report.json"
+    if report_path.is_file():
+        try:
+            previous_report = _read_json(report_path)
+        except (OSError, json.JSONDecodeError):
+            previous_report = None
+    journal_check = last_check_from_journal(
+        artifacts, (baseline.provenance or {}).get("baseline_id"))
+    audit = compute_audit(
+        intent_state(intent, intent_path),
+        baseline.provenance or {},
+        previous_report,
+        accept=bool(getattr(args, "accept_post_hoc_intent", False)),
+        journal_check=journal_check,
+    )
+    pending_fps = pending_fingerprints(audit)
+
+    guarded = []
     for change in changes:
         change.classification, change.note = classify_change(change, intent)
+        if change.classification == "expected" and pending_fps:
+            matches = matching_entries(change, intent)
+            if matches and all(entry_fingerprint(m) in pending_fps for m in matches):
+                change.post_hoc = True
+                guarded.append(change)
+
+    if guarded:
+        audit["post_hoc_pending"] = True
+        keys = ", ".join(e.get("key") or "?" for e in audit.get("post_hoc_entries") or [])
+        warnings.append(
+            "POST-HOC INTENT WARNING: intent entry(ies) were added or modified after the "
+            f"observed behavior change ({keys}). This intent was not part of the original "
+            "declared change scope. Do not silently classify the change as EXPECTED. "
+            "Confirm with the user, then re-run 'regression-firewall check "
+            "--accept-post-hoc-intent' to record the acknowledgement, or fix the change."
+        )
+    elif audit.get("post_hoc_accepted"):
+        warnings.append(
+            "post-hoc intent entries were accepted via --accept-post-hoc-intent "
+            "(explicit acknowledgement recorded in intent_audit)"
+        )
 
     score, verdict, floored, _contributions = score_changes(changes, cfg.thresholds)
+
+    # Unverified probes can never produce a clean PASS: there is no evidence.
+    if unverified and verdict == "PASS":
+        verdict = "REVIEW"
+        if score < cfg.thresholds.review_score:
+            score = cfg.thresholds.review_score
+            floored = True
+
+    # Pending post-hoc intent can never produce a clean PASS either.
+    if guarded and verdict == "PASS":
+        verdict = "REVIEW"
+        if score < cfg.thresholds.review_score:
+            score = cfg.thresholds.review_score
+            floored = True
 
     result = CheckResult(
         verdict=verdict,
@@ -399,6 +498,7 @@ def cmd_check(args, root: Path) -> int:
         changes=changes,
         intent_source=intent.source,
         intent_task=intent.task or None,
+        intent_audit=audit,
         config_changed_since_baseline=config_changed,
         baseline_trust_warning=trust_warning,
         warnings=warnings,
@@ -411,6 +511,17 @@ def cmd_check(args, root: Path) -> int:
     if cfg.report.markdown:
         report_md = artifacts / "report.md"
         report_md.write_text(render_markdown(result) + "\n", encoding="utf-8", newline="\n")
+    append_journal(artifacts, {
+        "event": "check",
+        "at": result.created_at,
+        "baseline_id": audit.get("baseline_id"),
+        "verdict": verdict,
+        "intent": audit.get("intent_at_check"),
+        "post_hoc": [e.get("key") for e in audit.get("post_hoc_entries") or []],
+        "post_hoc_entries": audit.get("post_hoc_entries") or [],
+        "accepted_entries": audit.get("accepted_entries") or [],
+        "accepted": bool(audit.get("post_hoc_accepted")),
+    })
 
     print(render_console(result))
     return VERDICT_EXIT[verdict]
@@ -478,6 +589,21 @@ def _wildcard_intent_warnings(intent) -> list:
                 "it marks all changes EXPECTED — narrow it to what the user actually asked for"
             )
     return warnings
+
+
+def _unverified_probes(baseline: Snapshot, latest: Snapshot) -> list:
+    """Probes that failed on BOTH sides: nothing was captured or compared."""
+    unverified = []
+    for surface in ("http", "cli", "public_api"):
+        before = baseline.capture_map(surface)
+        after = latest.capture_map(surface)
+        for probe_id in sorted(set(before) & set(after)):
+            if not before[probe_id].ok and not after[probe_id].ok:
+                unverified.append(
+                    (before[probe_id].target,
+                     after[probe_id].error or before[probe_id].error)
+                )
+    return unverified
 
 
 def args_config(args):

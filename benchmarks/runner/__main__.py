@@ -101,6 +101,18 @@ def ensure_repo_clone(repo: dict, workspace: Path, executor) -> Path:
     return dest
 
 
+def _as_argv(cmd, repo_id: str, what: str) -> list:
+    """Manifest commands must be argv lists. A bare string would be iterated
+    character-by-character and (e.g.) turn `-m pip ...` into `python -`,
+    a silent no-op that only surfaces later as a confusing verify failure."""
+    if isinstance(cmd, str):
+        raise RuntimeError(
+            f"repo {repo_id}: {what} entries must be argv lists "
+            f"(e.g. ['-m', 'pip', 'install', '-e', '.']), got a string: {cmd!r}"
+        )
+    return [str(part) for part in cmd]
+
+
 def ensure_venv(repo: dict, workspace: Path, wheel: Path, executor,
                 repo_root: Path) -> tuple:
     setup_cwd = repo_root / repo.get("project_root", "") / repo.get("setup_cwd", ".")
@@ -124,7 +136,8 @@ def ensure_venv(repo: dict, workspace: Path, wheel: Path, executor,
              # reintroduces old bugs into the venv
              ["-m", "pip", "uninstall", "--quiet", "-y", "regression-firewall"]]
     for cmd in repo.get("setup_commands", []):
-        steps.append([str(part).replace("{venv_python}", str(venv_python)) for part in cmd])
+        steps.append([part.replace("{venv_python}", str(venv_python))
+                      for part in _as_argv(cmd, repo["id"], "setup_commands")])
     for step in steps:
         result = executor.run([str(venv_python)] + step, setup_cwd, phase="setup")
         if not result.ok:
@@ -143,6 +156,28 @@ def ensure_venv(repo: dict, workspace: Path, wheel: Path, executor,
     if not install.ok:
         raise RuntimeError(f"wheel install failed: {install.stderr[-400:]}")
     return venv_python, env
+
+
+def reapply_setup(repo: dict, repo_root: Path, venv_python: Path, executor) -> None:
+    """Re-run the repo's setup commands after a per-case restore.
+
+    ``restore()`` runs ``git clean -fdqx``, which also deletes build-generated
+    files that live outside version control (e.g. urllib3's generated
+    ``src/urllib3/_version.py``). Without re-running setup those files stay
+    missing and every later capture fails — before the tool's unverified-
+    capture guard, that silently read as "no change" and produced false
+    misses. Setup commands are expected to be idempotent.
+    """
+    setup_cwd = repo_root / repo.get("project_root", "") / repo.get("setup_cwd", ".")
+    for cmd in repo.get("setup_commands", []):
+        argv = [part.replace("{venv_python}", str(venv_python))
+                for part in _as_argv(cmd, repo["id"], "setup_commands")]
+        result = executor.run([str(venv_python)] + argv, setup_cwd, phase="setup")
+        if not result.ok:
+            raise RuntimeError(
+                f"{' '.join(argv[:3])}...: "
+                f"{result.stderr[-300:] or result.stdout[-300:]}"
+            )
 
 
 def render(value, venv_python: Path, api_key: str = ""):
@@ -172,7 +207,7 @@ def read_report(project: Path) -> dict | None:
 
 
 def run_case(venv_python: Path, project: Path, case: dict, executor,
-             excludes: list, env: dict) -> tuple:
+             excludes: list, env: dict, setup_callable=None) -> tuple:
     started = time.monotonic()
     from benchmarks.runner.report import CaseResult
 
@@ -188,6 +223,15 @@ def run_case(venv_python: Path, project: Path, case: dict, executor,
     # previous case's artifacts (incl. its BLOCK report) must not leak in.
     restore(project, project, excludes)
     shutil.rmtree(project / ".regression-firewall", ignore_errors=True)
+
+    # 2. re-run setup: the clean above also removes build-generated files
+    # (outside version control) that the environment needs to import the
+    # package under test.
+    if setup_callable is not None:
+        try:
+            setup_callable()
+        except RuntimeError as exc:
+            return finish("REPOSITORY_SETUP_FAILURE", f"setup re-apply failed: {exc}")
 
     # Noise cases apply their mutation BEFORE the baseline so the volatile
     # code is active on both sides and only the values differ.
@@ -270,6 +314,17 @@ def run_repo(repo: dict, workspace: Path, wheel: Path, executor) -> list:
         return [CaseResult(repo_id=repo_id, case_id=f"{repo_id}_clone",
                            case_type="clone", case_class="INFRASTRUCTURE_FAILURE",
                            note=str(exc))]
+    # A persistent workspace can carry a stale working tree (interrupted run,
+    # manual debugging). Restore before setup/verify so they see pristine
+    # code; per-case restore alone happens too late.
+    excludes = repo.get("clean_excludes", [])
+    try:
+        restore(repo_root / repo.get("project_root", ""), repo_root, excludes)
+    except MutationError as exc:
+        log(f"  [INFRASTRUCTURE_FAILURE] pre-setup restore failed: {exc}")
+        return [CaseResult(repo_id=repo_id, case_id=f"{repo_id}_restore",
+                           case_type="restore", case_class="INFRASTRUCTURE_FAILURE",
+                           note=str(exc))]
     try:
         venv_python, _env = ensure_venv(repo, workspace, wheel, executor, repo_root)
     except RuntimeError as exc:
@@ -280,8 +335,8 @@ def run_repo(repo: dict, workspace: Path, wheel: Path, executor) -> list:
 
     project = repo_root / repo.get("project_root", "")
     if repo.get("verify_command"):
-        verify = [str(c).replace("{venv_python}", str(venv_python))
-                  for c in repo["verify_command"]]
+        verify = [c.replace("{venv_python}", str(venv_python))
+                  for c in _as_argv(repo["verify_command"], repo_id, "verify_command")]
         verify_cwd = project / repo.get("setup_cwd", ".")
         result = executor.run(verify, verify_cwd, phase="setup")
         if not result.ok:
@@ -294,8 +349,8 @@ def run_repo(repo: dict, workspace: Path, wheel: Path, executor) -> list:
     # write the regression-firewall config with substitutions
     api_key = ""
     if repo.get("api_key_command"):
-        cmd = [str(c).replace("{venv_python}", str(venv_python))
-               for c in repo["api_key_command"]]
+        cmd = [c.replace("{venv_python}", str(venv_python))
+               for c in _as_argv(repo["api_key_command"], repo_id, "api_key_command")]
         key_result = executor.run(cmd, project, phase="command")
         api_key = (key_result.stdout or "").strip().splitlines()[-1] if key_result.ok else ""
         if not api_key:
@@ -324,12 +379,16 @@ def run_repo(repo: dict, workspace: Path, wheel: Path, executor) -> list:
 def _run_cases(repo_id: str, repo: dict, repo_root: Path, project: Path,
                cases: list, venv_python: Path, executor, excludes: list) -> list:
     results: list = []
+
+    def reapply() -> None:
+        reapply_setup(repo, repo_root, venv_python, executor)
+
     for case in cases:
         case["repo_id"] = repo_id
         repeats = case.get("repeat", 1)
         for i in range(repeats):
             result = run_case(venv_python, project, case, executor, excludes,
-                              repo.get("env", {}))
+                              repo.get("env", {}), setup_callable=reapply)
             if repeats > 1:
                 result.case_id = f"{result.case_id}#{i + 1}"
             log(f"  [{result.case_class}] {result.case_id} ({result.duration_s}s)"

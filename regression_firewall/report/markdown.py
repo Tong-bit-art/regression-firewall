@@ -74,13 +74,37 @@ def render_markdown(result: CheckResult) -> str:
     if expected:
         out.append("## Expected Changes (matched intent)")
         out.append("")
-        out.append("| Target | Category | Transition | Note |")
-        out.append("|---|---|---|---|")
+        out.append("| Target | Category | Transition | Note | Basis |")
+        out.append("|---|---|---|---|---|")
         for change in expected:
+            basis = ("**POST-HOC — not part of the original declared scope; "
+                     "needs explicit user confirmation**" if change.post_hoc
+                     else "declared before the change")
             out.append(
                 f"| {change.target} | {change.category} "
-                f"| {_fmt(change.before)} → {_fmt(change.after)} | {change.note or ''} |"
+                f"| {_fmt(change.before)} → {_fmt(change.after)} | {change.note or ''} | {basis} |"
             )
+        out.append("")
+
+    audit = result.intent_audit or {}
+    if audit:
+        prev = audit.get("previous") or {}
+        out.append("## Intent Audit")
+        out.append("")
+        out.append(f"- Baseline id: `{audit.get('baseline_id')}`")
+        out.append(f"- Previous reference: {prev.get('source')}"
+                   + (f" (verdict {prev.get('verdict')})" if prev.get("verdict") else ""))
+        out.append(f"- Entries added/modified since baseline: "
+                   f"{len(audit.get('changed_since_baseline') or [])}")
+        out.append(f"- Entries added/modified since previous check: "
+                   f"{len(audit.get('changed_since_previous') or [])}")
+        pending = audit.get("post_hoc_entries") or []
+        if pending:
+            out.append(f"- **Pending post-hoc entries: "
+                       f"{', '.join(e.get('key') or '?' for e in pending)}**")
+        if audit.get("post_hoc_accepted"):
+            out.append("- Post-hoc entries were **accepted** via "
+                       "`--accept-post-hoc-intent` in this run.")
         out.append("")
 
     if not unexpected and not expected:

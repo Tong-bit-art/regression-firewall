@@ -161,12 +161,13 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 | Item | Priority | Status |
 |---|---|---|
 | Independent agent validation | — | **DONE 2026-10-07** (10/10 tasks, 0 violations) |
-| Intent auditability (post-check intent additions) | MEDIUM | Validation Finding 1: observed 5/10 tasks, all disclosed, no violations; consider marking late intent entries in reports |
-| Public-API intent target discoverability | MEDIUM | Validation Finding 2: `module.symbol` target form not documented → first-check BLOCK; document in SKILL.md or accept module+path form |
-| API-probing deployment docs | LOW | Validation Finding 4: tool must run where the target package is importable; document in README/SKILL.md |
-| Fresh holdout completion | MEDIUM | urllib3/packaging setup issues need investigation |
+| Intent auditability (post-check intent additions) | — | **DONE** (release-blocker closure): intent audit trail + post-hoc guard (`--accept-post-hoc-intent`) + append-only journal |
+| Public-API intent target discoverability | — | **DONE**: SKILL.md documents the `module.symbol` target form |
+| API-probing deployment docs | — | **DONE**: README documents that the tool must run where the target package is importable |
+| src/-layout public API coverage | — | **DONE**: `src/` import root + fixture `tests/fixtures/src_layout_package/` + post-fix validation (urllib3/packaging 7/7) |
+| Fresh holdout completion | HIGH (before next release) | Post-fix validation 7/7×3, but the holdout is **consumed**: select a NEW fresh holdout before the next release cycle |
 | PyPI publication | MEDIUM | README says source-only install; PyPI planned |
-| src/-layout editable install fix | MEDIUM | api-runner subprocess can't resolve src/-layout packages in benchmark env |
+| CI maintenance | LOW | Node 20 deprecation warnings for `actions/checkout@v4` / `actions/setup-python@v5`; `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19. Not release blockers |
 | typer.Typer signature: full fix | LOW | Canonical fingerprint works for most cases; edge cases with rich-conditional imports still UNSUPPORTED |
 
 ## Key Files to Read First
@@ -185,7 +186,9 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 ## Known Limitations (documented, not fixable in V0.1)
 
 1. No Docker isolation (scrubbed env only)
-2. src/-layout editable install + api-runner subprocess gap
+2. Post-hoc intent detection anchors on check runs (the tool cannot observe
+   when code was actually edited); artifact deletion is forbidden by the
+   skill and mitigated by report+journal redundancy
 3. CLI free-text secrets can't be reliably scanned
 4. Cookie value-level changes hidden by default redaction
 5. ISO date rule masks stable business dates (e.g. date_of_birth)
@@ -194,3 +197,5 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 8. No FastAPI app in benchmark corpus
 9. Independent validation was a single same-machine agent run (DeepSeek in
    OpenCode, 2026-10-07); no cross-vendor field trial yet
+10. Module-level imported helpers count as public namespace (consistent with
+    `dir()` semantics; can be noisy in refactors)

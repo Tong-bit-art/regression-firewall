@@ -37,6 +37,10 @@ class Change:
     severity: str = "low"  # info | low | medium | high | critical
     confidence: float = 0.95
     note: Optional[str] = None
+    # True when this change is only "expected" because of an intent entry that
+    # was added or modified after a previous check already observed the
+    # behavior (post-hoc intent). Such changes never PASS on their own.
+    post_hoc: bool = False
 
     @property
     def change_id(self) -> str:
@@ -69,6 +73,7 @@ class Change:
             severity=d.get("severity", "low"),
             confidence=d.get("confidence", 0.95),
             note=d.get("note"),
+            post_hoc=bool(d.get("post_hoc", False)),
         )
 
     def describe(self) -> str:

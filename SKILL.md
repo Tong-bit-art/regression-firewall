@@ -74,6 +74,13 @@ Rules for intent:
   your feature adds), list it — that is what `field_added` entries are for.
 - Never write an intent file that blanket-matches everything (`"*"` on all
   fields) to force a PASS. That is lying, and the report shows the notes.
+- **Late intent edits are audited.** The tool records the intent state at
+  baseline time and at every check. An entry that first appears (or is
+  modified) after a previous check already observed the behavior is a
+  POST-HOC INTENT CHANGE: it is marked in the report, the verdict stays at
+  REVIEW, and re-running `check` does not clear it. To accept one, get the
+  user's explicit approval and re-run `check --accept-post-hoc-intent` (the
+  acknowledgement is recorded). Otherwise fix the change.
 
 ### Step 3 — Check (after editing, before claiming success)
 
@@ -114,6 +121,13 @@ Read `report.md` / `report.json` for details. For any change, use
    explain a change, report it to the user as a finding.
 5. **Do not edit `.regression-firewall/report.*` or snapshot files by hand**
    — snapshots carry an integrity hash and tampering is flagged.
+6. **Never reclassify an already-observed change with a late intent edit.**
+   If a check flagged a change and you only then decide it was intended,
+   that is a POST-HOC INTENT CHANGE. The report will mark it and the verdict
+   stays REVIEW; `check` re-runs do not clear it. Get explicit user approval
+   and re-run `check --accept-post-hoc-intent` to record the acknowledgement
+   — or fix the change. A probe that could not be captured is also never a
+   PASS: the report says it was NOT verified.
 
 ## Configuration changes that ARE legitimate
 

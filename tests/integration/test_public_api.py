@@ -110,3 +110,33 @@ def test_expected_removal_with_intent_passes(project, run_rf, write):
     assert proc.returncode == 0, proc.stdout
     report = read_report(project)
     assert report["verdict"] == "PASS"
+
+
+BROKEN_MODULE_CONFIG = """\
+version: 1
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: false
+  public_api:
+    enabled: true
+    probes:
+      - id: ghost
+        module: ghost_module_9f3a_does_not_exist
+"""
+
+
+def test_unverifiable_probe_cannot_pass(project, run_rf, write):
+    """A probe that fails at baseline *and* check has verified nothing; the
+    verdict must not silently read as a clean PASS (real-world: build-generated
+    files deleted between captures, e.g. urllib3's src/urllib3/_version.py)."""
+    write(project / ".regression-firewall.yml", BROKEN_MODULE_CONFIG)
+    baseline = run_rf(["baseline"], project, expect_exit=0)
+    assert "failed to capture" in baseline.stdout
+
+    proc = run_rf(["check"], project)
+    assert proc.returncode == 1, proc.stdout  # REVIEW, not PASS
+    report = read_report(project)
+    assert report["verdict"] == "REVIEW"
+    assert any("NOT verified" in w for w in report["warnings"]), report["warnings"]

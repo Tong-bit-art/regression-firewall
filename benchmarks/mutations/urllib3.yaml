@@ -28,12 +28,18 @@ cases:
       classification: unexpected
       severity: critical
     verdict: BLOCK
+  # NOTE (2026-10-07, post-fix validation): the original mutation inserted a
+  # second `*` before the existing one (the signature already has `*,` after
+  # `url`), producing a SyntaxError — a benchmark authoring error. The
+  # original holdout result stands as recorded; this corrected mutation adds
+  # a required keyword-only parameter after the real `*,` and is used for
+  # post-fix validation only.
 - id: urllib3_17_signature_changed
   type: signature_changed
   edits:
   - file: src/urllib3/__init__.py
-    find: "def request(\n    method: str,\n    url: str,"
-    replace: "def request(\n    method: str,\n    url: str,\n    *,\n    new_required_param,"
+    find: "def request(\n    method: str,\n    url: str,\n    *,\n"
+    replace: "def request(\n    method: str,\n    url: str,\n    *,\n    new_required_param,\n"
     replace_all: false
   expected:
     changes:

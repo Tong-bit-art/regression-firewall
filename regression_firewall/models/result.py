@@ -19,6 +19,7 @@ class CheckResult:
     changes: list = field(default_factory=list)  # list[Change]
     intent_source: str = "none"
     intent_task: Optional[str] = None
+    intent_audit: dict = field(default_factory=dict)
     config_changed_since_baseline: bool = False
     baseline_trust_warning: bool = False
     warnings: list = field(default_factory=list)
@@ -44,6 +45,7 @@ class CheckResult:
             "score_floored": self.score_floored,
             "summary": self.summary,
             "intent": {"source": self.intent_source, "task": self.intent_task},
+            "intent_audit": self.intent_audit,
             "config_changed_since_baseline": self.config_changed_since_baseline,
             "baseline_trust_warning": self.baseline_trust_warning,
             "warnings": list(self.warnings),
@@ -59,6 +61,7 @@ class CheckResult:
             changes=[Change.from_dict(c) for c in d.get("changes", [])],
             intent_source=(d.get("intent") or {}).get("source", "none"),
             intent_task=(d.get("intent") or {}).get("task"),
+            intent_audit=d.get("intent_audit") or {},
             config_changed_since_baseline=bool(
                 d.get("config_changed_since_baseline", False)
             ),

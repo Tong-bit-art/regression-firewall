@@ -71,3 +71,35 @@ def test_capture_error(cfg, norm):
     after = capture("samplelib", {}, ok=False, error="import failed: SyntaxError: bad")
     changes = diff_public_api(before, after, cfg, make_change)
     assert change_of(changes, "capture_error").severity == "high"
+
+
+def test_unresolvable_export_is_symbol_removed(cfg, norm):
+    """A name declared in __all__ that `getattr` can no longer resolve must be
+    reported as symbol_removed (critical), not as a signature change. This is
+    the urllib3 holdout miss: removal from the import left a stale __all__."""
+    before = capture("samplelib", api_data(
+        {"greet": {"kind": "function", "signature": "(name:)"}}))
+    after = capture("samplelib", api_data(
+        {"greet": {"kind": "error", "signature": None}}))
+    changes = diff_public_api(before, after, cfg, make_change)
+    change = change_of(changes, "symbol_removed")
+    assert change.severity == "critical"
+    assert change.target == "samplelib.greet"
+    assert all(c.category != "signature_changed" for c in changes)
+
+
+def test_unresolvable_before_resolvable_after_is_symbol_added(cfg, norm):
+    before = capture("samplelib", api_data(
+        {"greet": {"kind": "error", "signature": None}}))
+    after = capture("samplelib", api_data(
+        {"greet": {"kind": "function", "signature": "(name:)"}}))
+    changes = diff_public_api(before, after, cfg, make_change)
+    assert change_of(changes, "symbol_added").target == "samplelib.greet"
+
+
+def test_unresolvable_on_both_sides_is_not_a_change(cfg, norm):
+    before = capture("samplelib", api_data(
+        {"greet": {"kind": "error", "signature": None}}))
+    after = capture("samplelib", api_data(
+        {"greet": {"kind": "error", "signature": None}}))
+    assert diff_public_api(before, after, cfg, make_change) == []

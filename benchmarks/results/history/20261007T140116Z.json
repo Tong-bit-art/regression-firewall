@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T14:15:04+00:00",
+  "generated_at": "2026-10-07T14:01:16+00:00",
   "isolation": "local-scrubbed-env",
   "tool_version": "0.1.0",
   "python_version": "3.11.9",
   "os": "Windows-10-10.0.26200-SP0",
-  "manifest_hash": "e87c38e2a3e71c90b7beba64a0255c6e6502c787",
+  "manifest_hash": "1ea50f1fd2f0c26d7d46cc98dee5a20654f3da74",
   "metrics": {
     "cases_total": 66,
     "cases_ran_to_verdict": 66,
@@ -16,13 +16,13 @@
     "planted_regression_cases": 29,
     "detected_regressions": 29,
     "missed_regressions": 0,
-    "false_positives": 0,
+    "false_positives": 4,
     "noise_or_control_cases": 37,
     "noise_or_control_clean": 37,
     "detection_recall": 1.0,
-    "false_positive_rate": 0.0,
+    "false_positive_rate": 0.1212,
     "severity_accuracy": 1.0,
-    "verdict_accuracy": 1.0
+    "verdict_accuracy": 0.9848
   },
   "cases": [
     {
@@ -39,7 +39,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.14
+      "duration_s": 4.22
     },
     {
       "repo_id": "flaskr",
@@ -55,7 +55,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.0
+      "duration_s": 4.44
     },
     {
       "repo_id": "flaskr",
@@ -71,7 +71,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 3.98
+      "duration_s": 4.33
     },
     {
       "repo_id": "flaskr",
@@ -87,7 +87,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.12
+      "duration_s": 5.48
     },
     {
       "repo_id": "flaskr",
@@ -105,13 +105,13 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.3
+      "duration_s": 4.34
     },
     {
       "repo_id": "flaskr",
       "case_id": "flaskr_01_status_redirect_to_400",
       "case_type": "status_redirect_to_400",
-      "case_class": "BENCHMARK_PASS",
+      "case_class": "REGRESSION_FIREWALL_FAILURE",
       "expected_verdict": "BLOCK",
       "detected_verdict": "BLOCK",
       "verdict_ok": true,
@@ -120,11 +120,11 @@
         "http/GET /1/update/header_changed (uncertain/low)",
         "http/GET /1/update/value_changed (uncertain/low)"
       ],
-      "false_positive_count": 0,
+      "false_positive_count": 1,
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.12
+      "duration_s": 4.34
     },
     {
       "repo_id": "flaskr",
@@ -140,7 +140,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.17
+      "duration_s": 4.89
     },
     {
       "repo_id": "flaskr",
@@ -156,7 +156,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.05
+      "duration_s": 5.12
     },
     {
       "repo_id": "flaskr",
@@ -172,32 +172,32 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.31
+      "duration_s": 4.5
     },
     {
       "repo_id": "flaskr",
       "case_id": "flaskr_19_intent_expected_status",
       "case_type": "intent_expected_status",
-      "case_class": "BENCHMARK_PASS",
+      "case_class": "REGRESSION_FIREWALL_FAILURE",
       "expected_verdict": "PASS",
-      "detected_verdict": "PASS",
-      "verdict_ok": true,
+      "detected_verdict": "REVIEW",
+      "verdict_ok": false,
       "missing": [],
       "extras": [
-        "http/GET /1/update/header_changed (expected/low)",
-        "http/GET /1/update/value_changed (expected/low)"
+        "http/GET /1/update/header_changed (uncertain/low)",
+        "http/GET /1/update/value_changed (uncertain/low)"
       ],
-      "false_positive_count": 0,
+      "false_positive_count": 2,
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.19
+      "duration_s": 4.2
     },
     {
       "repo_id": "flaskr",
       "case_id": "flaskr_20_intent_mismatch_stays_unexpected",
       "case_type": "intent_mismatch_status",
-      "case_class": "BENCHMARK_PASS",
+      "case_class": "REGRESSION_FIREWALL_FAILURE",
       "expected_verdict": "BLOCK",
       "detected_verdict": "BLOCK",
       "verdict_ok": true,
@@ -206,11 +206,11 @@
         "http/GET /1/update/header_changed (uncertain/low)",
         "http/GET /1/update/value_changed (uncertain/low)"
       ],
-      "false_positive_count": 0,
+      "false_positive_count": 1,
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.17
+      "duration_s": 4.11
     },
     {
       "repo_id": "healthchecks",
@@ -226,7 +226,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.73
+      "duration_s": 6.72
     },
     {
       "repo_id": "healthchecks",
@@ -242,7 +242,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.74
+      "duration_s": 6.7
     },
     {
       "repo_id": "healthchecks",
@@ -258,7 +258,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 6.61
     },
     {
       "repo_id": "healthchecks",
@@ -274,7 +274,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.69
+      "duration_s": 6.67
     },
     {
       "repo_id": "healthchecks",
@@ -290,7 +290,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.67
+      "duration_s": 7.05
     },
     {
       "repo_id": "healthchecks",
@@ -312,7 +312,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.84
+      "duration_s": 6.74
     },
     {
       "repo_id": "healthchecks",
@@ -328,7 +328,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 7.45
     },
     {
       "repo_id": "healthchecks",
@@ -344,7 +344,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.64
+      "duration_s": 6.67
     },
     {
       "repo_id": "healthchecks",
@@ -376,7 +376,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.62
+      "duration_s": 6.64
     },
     {
       "repo_id": "healthchecks",
@@ -392,7 +392,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.69
+      "duration_s": 6.7
     },
     {
       "repo_id": "healthchecks",
@@ -408,7 +408,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.62
+      "duration_s": 6.73
     },
     {
       "repo_id": "healthchecks",
@@ -424,7 +424,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.58
+      "duration_s": 6.69
     },
     {
       "repo_id": "healthchecks",
@@ -440,7 +440,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.66
+      "duration_s": 6.77
     },
     {
       "repo_id": "requests",
@@ -456,7 +456,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.69
+      "duration_s": 9.64
     },
     {
       "repo_id": "requests",
@@ -472,7 +472,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.56
+      "duration_s": 9.78
     },
     {
       "repo_id": "requests",
@@ -488,7 +488,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.7
+      "duration_s": 9.97
     },
     {
       "repo_id": "requests",
@@ -504,7 +504,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.76
+      "duration_s": 9.67
     },
     {
       "repo_id": "requests",
@@ -523,7 +523,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.81
+      "duration_s": 9.95
     },
     {
       "repo_id": "requests",
@@ -539,7 +539,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.77
+      "duration_s": 9.81
     },
     {
       "repo_id": "requests",
@@ -557,7 +557,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.76
+      "duration_s": 9.78
     },
     {
       "repo_id": "click",
@@ -573,7 +573,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.91
+      "duration_s": 5.23
     },
     {
       "repo_id": "click",
@@ -589,7 +589,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.97
+      "duration_s": 5.06
     },
     {
       "repo_id": "click",
@@ -605,7 +605,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.94
+      "duration_s": 4.97
     },
     {
       "repo_id": "click",
@@ -621,7 +621,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 5.05
+      "duration_s": 4.89
     },
     {
       "repo_id": "click",
@@ -637,7 +637,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.98
+      "duration_s": 5.09
     },
     {
       "repo_id": "click",
@@ -653,7 +653,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.95
+      "duration_s": 5.12
     },
     {
       "repo_id": "click",
@@ -669,7 +669,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 4.99
+      "duration_s": 4.98
     },
     {
       "repo_id": "sherlock",
@@ -685,7 +685,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.7
+      "duration_s": 8.51
     },
     {
       "repo_id": "sherlock",
@@ -701,7 +701,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.3
+      "duration_s": 8.19
     },
     {
       "repo_id": "sherlock",
@@ -717,7 +717,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.28
+      "duration_s": 8.17
     },
     {
       "repo_id": "sherlock",
@@ -733,7 +733,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.16
+      "duration_s": 8.33
     },
     {
       "repo_id": "sherlock",
@@ -749,7 +749,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.09
+      "duration_s": 8.27
     },
     {
       "repo_id": "sherlock",
@@ -765,7 +765,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.24
+      "duration_s": 8.23
     },
     {
       "repo_id": "sherlock",
@@ -781,7 +781,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.45
+      "duration_s": 8.11
     },
     {
       "repo_id": "sherlock",
@@ -797,7 +797,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.25
+      "duration_s": 8.03
     },
     {
       "repo_id": "sherlock",
@@ -813,7 +813,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 8.26
+      "duration_s": 8.11
     },
     {
       "repo_id": "typer",
@@ -829,7 +829,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.97
+      "duration_s": 6.76
     },
     {
       "repo_id": "typer",
@@ -845,7 +845,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.84
+      "duration_s": 6.75
     },
     {
       "repo_id": "typer",
@@ -861,7 +861,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.89
+      "duration_s": 7.02
     },
     {
       "repo_id": "typer",
@@ -877,7 +877,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 7.08
+      "duration_s": 6.88
     },
     {
       "repo_id": "typer",
@@ -893,7 +893,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.99
+      "duration_s": 6.92
     },
     {
       "repo_id": "typer",
@@ -909,7 +909,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.97
+      "duration_s": 6.84
     },
     {
       "repo_id": "typer",
@@ -925,7 +925,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 6.88
+      "duration_s": 6.97
     },
     {
       "repo_id": "httpie",
@@ -941,7 +941,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.38
+      "duration_s": 9.11
     },
     {
       "repo_id": "httpie",
@@ -957,7 +957,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.31
+      "duration_s": 9.3
     },
     {
       "repo_id": "httpie",
@@ -973,7 +973,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.33
+      "duration_s": 9.23
     },
     {
       "repo_id": "httpie",
@@ -989,7 +989,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.41
+      "duration_s": 9.39
     },
     {
       "repo_id": "httpie",
@@ -1005,7 +1005,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.27
+      "duration_s": 9.3
     },
     {
       "repo_id": "httpie",
@@ -1021,7 +1021,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 9.25
+      "duration_s": 9.28
     },
     {
       "repo_id": "pip-tools",
@@ -1037,7 +1037,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.64
+      "duration_s": 14.02
     },
     {
       "repo_id": "pip-tools",
@@ -1053,7 +1053,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.97
+      "duration_s": 13.8
     },
     {
       "repo_id": "pip-tools",
@@ -1069,7 +1069,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 13.84
+      "duration_s": 13.83
     },
     {
       "repo_id": "pip-tools",
@@ -1085,7 +1085,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 14.08
+      "duration_s": 13.97
     },
     {
       "repo_id": "pip-tools",
@@ -1101,7 +1101,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 14.09
+      "duration_s": 14.01
     }
   ],
   "notes": [

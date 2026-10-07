@@ -22,6 +22,28 @@ UNCERTAIN_CATEGORIES = {
 }
 
 
+def matching_entries(change: Change, intent: Intent) -> list:
+    """All intent entries that match this change, in file order."""
+    return [expected for expected in intent.expected_changes
+            if _entry_matches(change, expected)]
+
+
+def _entry_matches(change: Change, expected) -> bool:
+    if expected.surface not in ("*", change.surface):
+        return False
+    if not fnmatch.fnmatchcase(change.target, expected.target):
+        return False
+    if expected.category not in ("*", change.category):
+        return False
+    if expected.path and not fnmatch.fnmatchcase(_intent_path(change.path), expected.path):
+        return False
+    if expected.before is not None and not _values_equal(change.before, expected.before):
+        return False
+    if expected.after is not None and not _values_equal(change.after, expected.after):
+        return False
+    return True
+
+
 def classify_change(change: Change, intent: Intent) -> tuple:
     """Returns (classification, matched_note).
 
@@ -29,20 +51,9 @@ def classify_change(change: Change, intent: Intent) -> tuple:
     "unexpected". Uncertainty is never resolved silently: UNCERTAIN changes
     drive a REVIEW verdict.
     """
-    for expected in intent.expected_changes:
-        if expected.surface not in ("*", change.surface):
-            continue
-        if not fnmatch.fnmatchcase(change.target, expected.target):
-            continue
-        if expected.category not in ("*", change.category):
-            continue
-        if expected.path and not fnmatch.fnmatchcase(_intent_path(change.path), expected.path):
-            continue
-        if expected.before is not None and not _values_equal(change.before, expected.before):
-            continue
-        if expected.after is not None and not _values_equal(change.after, expected.after):
-            continue
-        return "expected", (expected.note or None)
+    matches = matching_entries(change, intent)
+    if matches:
+        return "expected", (matches[0].note or None)
     if change.category in UNCERTAIN_CATEGORIES:
         return "uncertain", None
     return "unexpected", None

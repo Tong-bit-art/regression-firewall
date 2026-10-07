@@ -4,6 +4,12 @@ from ..config.schema import Config
 from ..models.snapshot import ProbeCapture
 
 
+def _resolvable(entry) -> bool:
+    """False when a symbol entry exists but introspection could not resolve
+    it (stale ``__all__`` entry, broken export, getattr failure)."""
+    return bool(entry) and entry.get("kind") != "error"
+
+
 def diff_public_api(before: ProbeCapture, after: ProbeCapture,
                     config: Config, make_change) -> list:
     changes = []
@@ -23,37 +29,41 @@ def diff_public_api(before: ProbeCapture, after: ProbeCapture,
     symbols_before = (before.data or {}).get("symbols") or {}
     symbols_after = (after.data or {}).get("symbols") or {}
 
-    for name in sorted(set(symbols_before) - set(symbols_after)):
-        entry = symbols_before[name]
-        changes.append(make_change(
-            "public_api", f"{module}.{name}", "symbol_removed",
-            before={"kind": entry.get("kind"), "signature": entry.get("signature")},
-            after=None,
-            description=(f"{module}.{name} ({entry.get('kind')}) is no longer importable"),
-            config=config,
-        ))
+    for name in sorted(set(symbols_before) | set(symbols_after)):
+        entry_before = symbols_before.get(name)
+        entry_after = symbols_after.get(name)
+        resolvable_before = _resolvable(entry_before)
+        resolvable_after = _resolvable(entry_after)
 
-    for name in sorted(set(symbols_after) - set(symbols_before)):
-        entry = symbols_after[name]
-        changes.append(make_change(
-            "public_api", f"{module}.{name}", "symbol_added",
-            before=None,
-            after={"kind": entry.get("kind"), "signature": entry.get("signature")},
-            description=f"{module}.{name} ({entry.get('kind')}) is newly importable",
-            config=config,
-        ))
-
-    for name in sorted(set(symbols_before) & set(symbols_after)):
-        entry_before, entry_after = symbols_before[name], symbols_after[name]
-        sig_before, sig_after = entry_before.get("signature"), entry_after.get("signature")
-        if sig_before != sig_after and sig_before and sig_after:
+        if resolvable_before and not resolvable_after:
             changes.append(make_change(
-                "public_api", f"{module}.{name}", "signature_changed",
-                before=sig_before, after=sig_after,
-                evidence={"kind": entry_after.get("kind")},
-                description=(f"{module}.{name}: signature {sig_before} -> {sig_after}"),
+                "public_api", f"{module}.{name}", "symbol_removed",
+                before={"kind": entry_before.get("kind"),
+                        "signature": entry_before.get("signature")},
+                after=None,
+                description=(f"{module}.{name} ({entry_before.get('kind')}) "
+                             f"is no longer importable"),
                 config=config,
             ))
+        elif not resolvable_before and resolvable_after:
+            changes.append(make_change(
+                "public_api", f"{module}.{name}", "symbol_added",
+                before=None,
+                after={"kind": entry_after.get("kind"),
+                       "signature": entry_after.get("signature")},
+                description=f"{module}.{name} ({entry_after.get('kind')}) is newly importable",
+                config=config,
+            ))
+        elif resolvable_before and resolvable_after:
+            sig_before, sig_after = entry_before.get("signature"), entry_after.get("signature")
+            if sig_before != sig_after and sig_before and sig_after:
+                changes.append(make_change(
+                    "public_api", f"{module}.{name}", "signature_changed",
+                    before=sig_before, after=sig_after,
+                    evidence={"kind": entry_after.get("kind")},
+                    description=(f"{module}.{name}: signature {sig_before} -> {sig_after}"),
+                    config=config,
+                ))
 
     for name in sorted(set((before.data or {}).get("submodules") or [])
                        - set((after.data or {}).get("submodules") or [])):

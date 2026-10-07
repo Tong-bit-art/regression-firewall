@@ -52,6 +52,17 @@ Purely additive uncertain changes (a new response field, a new public symbol)
 do **not** force a REVIEW on their own — additive changes are the classic
 false-positive trap. They still accumulate score and surface in the report.
 
+**No-evidence floors (applied after the table, never upgrade to PASS):**
+
+- A probe that could not be captured at **both** baseline and check was not
+  verified at all; the verdict is kept at REVIEW and the report warns that
+  the probe was NOT verified.
+- An `EXPECTED` match that is only possible because of a **post-hoc intent
+  entry** (added or modified after a previous check already observed the
+  behavior) is marked in the report and the verdict is kept at REVIEW until
+  the user explicitly acknowledges it (`check --accept-post-hoc-intent`).
+  Re-running the check does not clear it.
+
 **Score floors for consistency.** When a rule (not the raw score) triggers a
 verdict, the reported score is floored to the corresponding threshold so the
 number never contradicts the verdict (e.g. one CRITICAL change yields score

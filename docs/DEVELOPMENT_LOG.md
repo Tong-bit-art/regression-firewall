@@ -3,6 +3,69 @@
 Format: reverse-chronological entries; architecture decisions live in
 `ARCHITECTURE.md` (D1–D5) and are referenced, not duplicated.
 
+## 2026-10-07 — V0.1 Release Blocker Closure
+
+Scope: close the known issues affecting V0.1 beta credibility. No new
+behavior surfaces; feature freeze respected.
+
+**P0 — src-layout public API coverage (FIXED)**
+
+The previously recorded "src/-layout editable install" diagnosis was wrong.
+Controlled reproduction found the actual failure chain:
+
+- the benchmark's per-case restore (`git clean -fdqx`) deleted build-generated
+  files (urllib3's `src/urllib3/_version.py`) → every later capture failed;
+- a probe failing on BOTH sides produced no diff and silently read as PASS.
+
+Tool fixes: standard `src/` import root for introspection; unresolvable
+`__all__` names classified as `symbol_removed` (were misreported as signature
+changes); module-dict enumeration behind a restrictive `__dir__`
+(`packaging.version`); no-evidence guard (REVIEW + "NOT verified" warning for
+probes that fail at both baseline and check). Benchmark fixes: setup
+re-applied after each per-case restore; argv-list validation for
+setup/verify/api-key commands (plain strings silently char-split into
+`python -`); pre-setup working-tree restore; packaging probe now covers
+`packaging.version`; urllib3's invalid signature mutation corrected (it
+inserted a second `*` → SyntaxError). New regression fixture:
+`tests/fixtures/src_layout_package/`.
+
+**P0 — intent audit immutability (FIXED)**
+
+Baseline provenance and every check report now record the intent state
+(hash + per-entry fingerprints + baseline id). Entries added or modified
+after a previous check already observed the behavior are POST-HOC: marked in
+the report, cumulative across checks, keep the verdict at REVIEW and never a
+clean PASS, until acknowledged with `check --accept-post-hoc-intent`.
+An append-only `intent_audit.jsonl` journal keeps the audit alive if
+`report.json` is deleted, and the re-baseline guard reads it too. Tests:
+7 integration + 5 unit.
+
+**Benchmark hygiene corrections** (disclosed; ground truth preserved)
+
+- flaskr: `header_changed`/`value_changed` on `GET /1/update` are mechanical
+  consequences of redirect→400 and are now declared as `expected_extras`;
+  `flaskr_19`'s intent declares its side effects (the tool correctly
+  REVIEWed the incomplete intent before).
+- `*_benchmark_marker.txt` files were held by `clean_excludes` and leaked
+  across runs (a stale marker made `file_created` undetectable) → excluded
+  entries removed; stale markers cleaned.
+- holdout post-fix validation: bottle/urllib3/packaging 7/7 (3/3 planted
+  regressions, 0 FP). The holdout is consumed → a new fresh holdout is
+  required before the next release cycle.
+
+**Verification**
+
+- pytest: 176 passed.
+- Bundled evals: 20/20 (recall 100%, FPR 0%, severity/verdict 100%).
+- Validation corpus: 66/66 cases ran, **29/29 planted regressions, 0 FP**.
+- Clean install: sdist + wheel verified in fresh venvs; CLI smoke
+  (discover → baseline → mutate → check REVIEW → explain) green.
+- Targeted: secret redaction, provenance/tamper detection, anti-rebaseline
+  (25 tests).
+- CI: 7/7 green on the pushed commits.
+
+See `docs/RELEASE_BLOCKER_CLOSURE.md` for the gate decision.
+
 ## 2026-10-07 — Independent agent validation executed
 
 The previously documented 10-task protocol was executed with an independent
@@ -163,8 +226,10 @@ holdout must be selected before the next release. Protocol documented.
 
 **P1 — independent agent validation**
 `docs/INDEPENDENT_AGENT_VALIDATION.md` created with a 10-task protocol.
-Status: NOT EXECUTED (no independent agent CLI available). Self-dogfooding
-(5 tasks on flaskr) documented as a lower-confidence signal.
+Status at the time: NOT EXECUTED (no independent agent CLI available).
+Self-dogfooding (5 tasks on flaskr) documented as a lower-confidence signal.
+*(Later the same day the protocol WAS executed with a fresh-context DeepSeek
+V4 Pro session in OpenCode — see the entry at the top of this log.)*
 
 **Final benchmark results (validation corpus, all fixes deployed)**
 

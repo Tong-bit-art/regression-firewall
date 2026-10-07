@@ -90,24 +90,38 @@ def main() -> int:
         result["error"] = f"import failed: {type(exc).__name__}: {exc}"
         return flush(1)
 
+    public_namespace = {str(n) for n in vars(module) if not str(n).startswith("_")}
     dunder_all = getattr(module, "__all__", None)
     if dunder_all is not None:
-        names = [str(n) for n in dunder_all]
-        result["exports"] = list(names)
+        exported = [str(n) for n in dunder_all]
+        result["exports"] = list(exported)
+        # __all__ is a declaration, not the namespace: it can be stale (a
+        # name listed there may no longer resolve) and it can omit names
+        # that are still importable (a new top-level function, or a module
+        # with a restrictive __dir__ such as packaging.version). Capture the
+        # union of declared exports and importable public names.
+        names = sorted(set(exported) | public_namespace)
     else:
-        names = [n for n in dir(module) if not n.startswith("_")]
-        if args.include_private:
-            names += [
-                n for n in dir(module)
-                if n.startswith("_") and not n.startswith("__")
-            ]
+        names = sorted(public_namespace)
+    if args.include_private:
+        names += [
+            str(n) for n in vars(module)
+            if str(n).startswith("_") and not str(n).startswith("__")
+        ]
 
     symbols = {}
     for name in sorted(set(names)):
         try:
             obj = getattr(module, name)
         except BaseException as exc:
-            symbols[name] = {"kind": "error", "signature": f"getattr failed: {type(exc).__name__}"}
+            # A declared name that cannot be resolved (stale __all__ entry,
+            # broken export) is recorded as unresolvable; the diff classifies
+            # it as a removal when the other side resolves it.
+            symbols[name] = {
+                "kind": "error",
+                "signature": None,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
             continue
         if inspect.ismodule(obj):
             symbols[name] = {"kind": "module", "signature": None}

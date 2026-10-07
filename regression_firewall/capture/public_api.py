@@ -30,8 +30,16 @@ def _run_probe(probe, project_root: Path) -> tuple:
     out_path = Path(handle.name)
 
     env = os.environ.copy()
+    # Standard layout support: flat projects expose the package at the
+    # project root, src-layout projects at <root>/src. Both roots are the
+    # project's own code; adding them keeps introsption on the working tree
+    # instead of an installed copy.
+    import_roots = [str(project_root)]
+    src_root = Path(project_root) / "src"
+    if src_root.is_dir():
+        import_roots.append(str(src_root))
     env["PYTHONPATH"] = os.pathsep.join(
-        [str(project_root)] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
+        import_roots + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
     )
     env["PYTHONDONTWRITEBYTECODE"] = "1"
 

@@ -148,6 +148,10 @@ baseline  ──►  capture (raw)  ──►  normalize (both sides)  ──►
   ([docs/RISK_MODEL.md](docs/RISK_MODEL.md)).
 - **Deterministic.** No LLM is involved anywhere in the pipeline. The same
   inputs always produce the same verdict.
+- **No silent passes.** A probe that could not be captured on either side,
+  or an intent entry that appeared after a check already observed the
+  behavior (post-hoc intent), keeps the verdict at REVIEW and is called out
+  in the report — re-running does not clear it.
 - **Secrets stay out of snapshots.** Auth headers, cookie values, and
   secret-named body fields are masked at capture time, so the stored
   baseline/latest files are safe to share in bug reports.
@@ -168,7 +172,10 @@ the agent's rules/instructions. The skill teaches the agent the workflow
 
 - never declare a task complete while the verdict is `BLOCK`;
 - never update the baseline to silence a regression;
-- never weaken the configuration solely to make a failing check pass.
+- never weaken the configuration solely to make a failing check pass;
+- never reclassify an already-observed change with a late intent edit —
+  post-hoc intent entries keep the verdict at REVIEW until the user
+  explicitly acknowledges them (`check --accept-post-hoc-intent`).
 
 `check` exit codes for scripting: `0` PASS · `1` REVIEW · `3` BLOCK · `2` usage error · `70` runtime error.
 
@@ -239,9 +246,10 @@ flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
 | Metric | Value |
 |---|---|
-| Detection recall | **93.10%** |
-| False positive rate (after triage) | **0%** |
+| Detection recall | **100%** |
+| False positive rate | **0%** |
 | Severity accuracy | **100%** |
+| Verdict accuracy | **100%** |
 
 ### Historical regressions (real bugs)
 
@@ -250,7 +258,10 @@ coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HIST
 
 ### Fresh holdout (never used for development)
 
-3 new repos (bottle, urllib3, packaging). Run once. See
+3 new repos (bottle, urllib3, packaging). Run once on 2026-10-07; the run
+exposed benchmark and coverage issues that were fixed the same day.
+**Post-fix validation: 7/7 per repo** (3/3 planted regressions detected,
+0 false positives) — not a holdout result. See
 [docs/FINAL_HOLDOUT.md](docs/FINAL_HOLDOUT.md) and
 [docs/FINAL_EVIDENCE_REPORT.md](docs/FINAL_EVIDENCE_REPORT.md).
 

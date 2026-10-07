@@ -56,7 +56,11 @@ def render_console(result: CheckResult) -> str:
         out.append("")
         out.append("Expected Changes")
         for change in expected:
-            out.append(f"  ✓ EXPECTED  {change.target}  {change.category}  {_transition(change)}")
+            if change.post_hoc:
+                out.append(f"  \u26a0 EXPECTED (POST-HOC, NOT CONFIRMED)  "
+                           f"{change.target}  {change.category}  {_transition(change)}")
+            else:
+                out.append(f"  ✓ EXPECTED  {change.target}  {change.category}  {_transition(change)}")
             if change.note:
                 out.append(f"      {change.note}")
 

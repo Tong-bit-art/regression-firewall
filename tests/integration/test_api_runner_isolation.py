@@ -45,6 +45,39 @@ def test_api_runner_module_import_uses_isolated_cwd(tmp_path):
     assert payload["symbols"]["BENCHMARK_CONST"]["kind"] == "int"
 
 
+def test_api_runner_sees_names_hidden_by_dunder_dir(tmp_path):
+    """packaging.version defines __dir__() returning only __all__; a new
+    top-level function is still importable and must be captured (the added
+    symbol is real public surface even when the module hides it from dir())."""
+    import os
+
+    pkg = tmp_path / "dirpkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(
+        '__all__ = ["visible"]\n\n\n'
+        'def __dir__():\n    return __all__\n\n\n'
+        'def visible():\n    return 1\n\n\n'
+        'def hidden_but_importable():\n    return 2\n',
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.json"
+    env = {
+        "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),
+        "PATH": os.environ.get("PATH", ""),
+        "PYTHONPATH": str(tmp_path),
+    }
+    proc = subprocess.run(
+        [sys.executable, str(api_capture.RUNNER_PATH), "--module", "dirpkg",
+         "--out", str(out)],
+        cwd=str(tmp_path), capture_output=True, text=True, timeout=60, env=env,
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["ok"] is True, payload["error"]
+    assert "hidden_but_importable" in payload["symbols"]
+    assert payload["exports"] == ["visible"]
+
+
 def test_canonical_signature_deterministic_across_subprocesses(tmp_path):
     """P0 fix: framework-generated callables must produce the same canonical
     fingerprint across subprocess invocations. Uses a synthetic class with

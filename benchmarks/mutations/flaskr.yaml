@@ -49,6 +49,10 @@ cases:
       category: value_changed
       classification: uncertain
       severity: '*'
+    - surface: http
+      category: header_changed
+      classification: uncertain
+      severity: '*'
     verdict: BLOCK
 - id: flaskr_07_header_change
   type: header_change
@@ -105,10 +109,27 @@ cases:
       before: 302
       after: 400
       note: declared intentional for the benchmark
+    - surface: http
+      target: GET /1/update
+      category: header_changed
+      note: the Location header disappears together with the redirect
+    - surface: http
+      target: GET /1/update
+      category: value_changed
+      note: the redirect body is replaced by the 400 error page
   expected:
     changes:
     - surface: http
       category: status_changed
+      classification: expected
+      severity: '*'
+    expected_extras:
+    - surface: http
+      category: value_changed
+      classification: expected
+      severity: '*'
+    - surface: http
+      category: header_changed
       classification: expected
       severity: '*'
     verdict: PASS
@@ -136,6 +157,10 @@ cases:
     expected_extras:
     - surface: http
       category: value_changed
+      classification: uncertain
+      severity: '*'
+    - surface: http
+      category: header_changed
       classification: uncertain
       severity: '*'
     verdict: BLOCK
