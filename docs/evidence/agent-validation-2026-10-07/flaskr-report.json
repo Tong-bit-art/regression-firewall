@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-07T12:52:32+00:00",
+  "tool_version": "0.1.0",
+  "project": {
+    "name": "flaskr",
+    "language": "python",
+    "frameworks": [
+      "flask"
+    ],
+    "package_name": "flaskr"
+  },
+  "verdict": "PASS",
+  "score": 0,
+  "score_floored": false,
+  "summary": {
+    "expected": 1,
+    "unexpected": 0,
+    "uncertain": 0
+  },
+  "intent": {
+    "source": "C:\\regfw-validation\\flaskr\\.regression-firewall\\intent.json",
+    "task": "Return explicit text/plain for the /hello endpoint instead of the default text/html."
+  },
+  "config_changed_since_baseline": false,
+  "baseline_trust_warning": false,
+  "warnings": [
+    "surface 'cli' is enabled but no probes are configured",
+    "surface 'public_api' is enabled but no probes are configured"
+  ],
+  "changes": [
+    {
+      "surface": "http",
+      "target": "GET /hello",
+      "category": "content_type_changed",
+      "before": "text/html; charset=utf-8",
+      "after": "text/plain; charset=utf-8",
+      "path": null,
+      "evidence": {},
+      "description": "GET /hello: content-type text/html; charset=utf-8 -> text/plain; charset=utf-8",
+      "classification": "expected",
+      "severity": "medium",
+      "confidence": 0.95,
+      "note": "Dana's change: /hello now returns text/plain",
+      "before_present": true,
+      "after_present": true,
+      "change_id": "3b4d5bb83310",
+      "why_it_matters": "Clients select parsers by content-type; a flip can turn working integrations into parse errors.",
+      "recommended_action": "Restore the previous content-type or update all consumers deliberately."
+    }
+  ]
+}

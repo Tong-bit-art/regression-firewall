@@ -1,7 +1,8 @@
 # Regression Firewall — Agent Handoff Document
 
 **Handoff date:** 2026-10-07
-**Frozen implementation commit:** `d3c1e49` (latest main, CI green)
+**Frozen implementation commit:** `d3c1e49` (CI green)
+**Latest docs commits:** validation execution + evidence (see `git log`)
 **Repo:** https://github.com/Tong-bit-art/regression-firewall (public)
 **Working directory:** `D:\Regression Firewall Skill`
 **Python:** 3.11.9 (system), 3.14.3 (uv-managed, use `py -V:Astral/CPython3.14.3 -m venv`)
@@ -28,6 +29,7 @@ proves the old behavior still works.
 | Clean install | wheel + sdist verified in fresh venvs |
 | Real-world benchmark | 8 repos, 66 cases, 4 core bugs found & fixed |
 | Dogfooding | 5 tasks on flaskr (self-dogfooding, caveat documented) |
+| Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07) |
 
 ## Verdict Status
 
@@ -35,7 +37,7 @@ proves the old behavior still works.
 |---|---|
 | ENGINEERING READY | **YES** |
 | BEHAVIOR DETECTION VALIDATED | **YES (with caveats)** |
-| INDEPENDENT AGENT VALIDATED | **NO** (protocol documented, not executed) |
+| INDEPENDENT AGENT VALIDATED | **YES (with caveats)** — executed 2026-10-07: DeepSeek V4 Pro in OpenCode, fresh context; 10/10 protocol tasks, 0 hard-rule violations, 3/3 pressure scenarios held; findings in `docs/INDEPENDENT_AGENT_VALIDATION.md` |
 | PUBLIC RELEASE READY | **YES (BETA)** |
 
 ## Architecture (key modules)
@@ -158,7 +160,10 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 
 | Item | Priority | Status |
 |---|---|---|
-| Independent agent validation | HIGH (before 1.0) | Protocol in `docs/INDEPENDENT_AGENT_VALIDATION.md`, NOT EXECUTED |
+| Independent agent validation | — | **DONE 2026-10-07** (10/10 tasks, 0 violations) |
+| Intent auditability (post-check intent additions) | MEDIUM | Validation Finding 1: observed 5/10 tasks, all disclosed, no violations; consider marking late intent entries in reports |
+| Public-API intent target discoverability | MEDIUM | Validation Finding 2: `module.symbol` target form not documented → first-check BLOCK; document in SKILL.md or accept module+path form |
+| API-probing deployment docs | LOW | Validation Finding 4: tool must run where the target package is importable; document in README/SKILL.md |
 | Fresh holdout completion | MEDIUM | urllib3/packaging setup issues need investigation |
 | PyPI publication | MEDIUM | README says source-only install; PyPI planned |
 | src/-layout editable install fix | MEDIUM | api-runner subprocess can't resolve src/-layout packages in benchmark env |
@@ -174,7 +179,8 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 6. `docs/BENCHMARK_RESULTS.md` — real-world benchmark evidence
 7. `docs/HISTORICAL_REGRESSIONS.md` — real regression analysis
 8. `SKILL.md` — agent workflow contract
-9. `docs/INDEPENDENT_AGENT_VALIDATION.md` — protocol for next agent
+9. `docs/INDEPENDENT_AGENT_VALIDATION.md` — executed validation record
+   (10/10 tasks, findings, raw evidence pointer)
 
 ## Known Limitations (documented, not fixable in V0.1)
 
@@ -186,4 +192,5 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 6. Re-baselining after edits can't be distinguished from legitimate use
 7. Public API behavioral changes within method bodies not detected
 8. No FastAPI app in benchmark corpus
-9. Self-dogfooding only (no independent agent verification)
+9. Independent validation was a single same-machine agent run (DeepSeek in
+   OpenCode, 2026-10-07); no cross-vendor field trial yet

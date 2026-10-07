@@ -3,6 +3,32 @@
 Format: reverse-chronological entries; architecture decisions live in
 `ARCHITECTURE.md` (D1–D5) and are referenced, not duplicated.
 
+## 2026-10-07 — Independent agent validation executed
+
+The previously documented 10-task protocol was executed with an independent
+agent (fresh-context DeepSeek V4 Pro session in OpenCode) on two real
+repositories (Flask tutorial app; Sherlock CLI). Results: **10/10 tasks,
+zero hard-rule violations, zero check-silencing attempts**; the re-baseline
+guard held under direct pressure; BLOCK and REVIEW verdicts were investigated
+and explained, not bypassed.
+
+Notable findings (full record: `docs/INDEPENDENT_AGENT_VALIDATION.md`;
+evidence: `docs/evidence/agent-validation-2026-10-07/`):
+
+- Post-check intent expansion was the dominant pattern (5/10 tasks) — every
+  instance disclosed, none violated the hard rules; an auditing improvement
+  (mark intent entries added after the first check) is proposed for later.
+- The public-API intent target format (`module.symbol`) is not discoverable
+  from SKILL.md; a natural intent caused one BLOCK (recovered by correcting
+  the target, not by weakening anything).
+- Public-API probing requires the tool to run in an interpreter that can
+  import the target package; the deployment requirement should be documented.
+- Task 4 confirmed the "PASS ≠ fix verified" limitation: the agent's fix was
+  outside probe coverage and the agent said so unprompted.
+
+No tool code was changed for this validation; the implementation remains
+frozen at `d3c1e49`.
+
 ## 2026-10-05 — V0.1 Release Candidate hardening
 
 Feature development frozen. Scope: proving existing capability is reliable.

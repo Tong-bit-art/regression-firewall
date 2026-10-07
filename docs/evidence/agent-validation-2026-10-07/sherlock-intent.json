@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "task": "Remove get_version from the public API (make it internal), keeping the version lookup working exactly as before.",
+  "expected_changes": [
+    {
+      "surface": "public_api",
+      "target": "sherlock_project.get_version",
+      "category": "symbol_removed",
+      "note": "Rename get_version to _get_version so the version-lookup helper is no longer part of the package's public API. __version__ is still resolved the same way."
+    }
+  ]
+}

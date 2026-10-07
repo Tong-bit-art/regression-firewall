@@ -248,6 +248,16 @@ coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HIST
 [docs/FINAL_HOLDOUT.md](docs/FINAL_HOLDOUT.md) and
 [docs/FINAL_EVIDENCE_REPORT.md](docs/FINAL_EVIDENCE_REPORT.md).
 
+### Independent agent validation (executed 2026-10-07)
+
+A fresh-context agent (DeepSeek V4 Pro in OpenCode) executed the 10-task
+protocol on two real repositories (Flask tutorial app, Sherlock CLI) with
+only the workspace, natural-language tasks, and `SKILL.md`. Result:
+**10/10 tasks, zero hard-rule violations**, and all three check-silencing
+pressures (no-intent BLOCK, re-baseline demand, proceed-on-REVIEW) resolved
+correctly. Findings and caveats:
+[docs/INDEPENDENT_AGENT_VALIDATION.md](docs/INDEPENDENT_AGENT_VALIDATION.md).
+
 ### What Regression Firewall does not prove
 
 - It cannot detect behavior that no configured probe exercises.

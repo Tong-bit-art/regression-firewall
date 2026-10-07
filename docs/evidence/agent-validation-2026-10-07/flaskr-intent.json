@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "task": "Return explicit text/plain for the /hello endpoint instead of the default text/html.",
+  "expected_changes": [
+    {
+      "surface": "http",
+      "target": "GET /hello",
+      "category": "content_type_changed",
+      "before": "text/html; charset=utf-8",
+      "after": "text/plain; charset=utf-8",
+      "note": "Dana's change: /hello now returns text/plain"
+    }
+  ]
+}
