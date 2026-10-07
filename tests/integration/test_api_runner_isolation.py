@@ -46,23 +46,40 @@ def test_api_runner_module_import_uses_isolated_cwd(tmp_path):
 
 
 def test_canonical_signature_deterministic_across_subprocesses():
-    """P0 fix: framework-generated callables (e.g. typer.Typer) must produce
-    the same canonical fingerprint across subprocess invocations."""
+    """P0 fix: framework-generated callables must produce the same canonical
+    fingerprint across subprocess invocations. Uses a synthetic class with
+    volatile default reprs (simulating typer.Typer's Doc() issue) so it runs
+    anywhere without typer installed."""
     import subprocess
+    import textwrap
 
-    script = (
-        "import sys; sys.path.insert(0, r'D:\Regression Firewall Skill')\n"
-        "import typer\n"
-        "from regression_firewall.capture._api_runner import _canonical_signature\n"
-        "print(_canonical_signature(typer.Typer))\n"
-    )
+    helper_script = textwrap.dedent("""\
+        import sys
+        sys.path.insert(0, r"D:\\Regression Firewall Skill")
+        from regression_firewall.capture._api_runner import _canonical_signature
+
+        class _Volatile:
+            def __repr__(self):
+                return f"<Volatile {id(self)}>"
+        _volatile = _Volatile()
+
+        class FrameworkCallable:
+            def __init__(self, name="app", *, debug=_volatile, rich=True):
+                pass
+
+        print(_canonical_signature(FrameworkCallable))
+    """)
+    import tempfile
+    script_file = Path(tempfile.mkdtemp()) / "sig_test.py"
+    script_file.write_text(helper_script, encoding="utf-8")
+
     sigs = set()
     for _ in range(3):
         proc = subprocess.run(
-            [r"C:\regfw-bench\venvs\typer\Scripts\python.exe", "-c", script],
-            capture_output=True, text=True, timeout=30,
-            cwd=r"C:\regfw-bench\repos\typer",
+            [sys.executable, "-c", script_file.read_text(encoding="utf-8")],
+            capture_output=True, text=True, timeout=30, cwd=str(tmp_path),
         )
+        assert proc.returncode == 0, proc.stderr
         sigs.add(proc.stdout.strip())
     assert len(sigs) == 1, f"nondeterministic: {sigs}"
 
