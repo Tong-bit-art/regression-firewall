@@ -5,7 +5,6 @@ cases:
   expected:
     changes: []
     verdict: PASS
-
 - id: pip_tools_ctl_non_behavior
   type: non_behavior_change_control
   edits:
@@ -15,14 +14,16 @@ cases:
   expected:
     changes: []
     verdict: PASS
-
 - id: pip_tools_11_stdout_changed
   type: stdout_changed
   edits:
   - file: piptools/__main__.py
-    find: 'cli.add_command(compile.cli, "compile")'
-    replace: 'cli.add_command(compile.cli, "compile (benchmark)")'
+    find: '@click.group()'
+    replace: '@click.group(help="pip-tools (benchmark).")'
   expected:
     changes:
-    - {surface: cli, category: stdout_changed, classification: uncertain, severity: low}
+    - surface: cli
+      category: stdout_changed
+      classification: uncertain
+      severity: low
     verdict: REVIEW

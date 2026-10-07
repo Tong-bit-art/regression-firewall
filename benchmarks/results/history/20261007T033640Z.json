@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T03:42:34+00:00",
+  "generated_at": "2026-10-07T03:36:40+00:00",
   "isolation": "local-scrubbed-env",
   "tool_version": "0.1.0",
   "python_version": "3.11.9",
@@ -39,7 +39,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.66
+      "duration_s": 3.78
     },
     {
       "repo_id": "typer",
@@ -55,7 +55,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.52
+      "duration_s": 3.34
     },
     {
       "repo_id": "typer",
@@ -71,7 +71,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.55
+      "duration_s": 3.69
     },
     {
       "repo_id": "typer",
@@ -87,7 +87,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.56
+      "duration_s": 4.47
     },
     {
       "repo_id": "typer",
@@ -103,7 +103,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.44
+      "duration_s": 3.2
     },
     {
       "repo_id": "typer",
@@ -119,7 +119,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.61
+      "duration_s": 3.06
     },
     {
       "repo_id": "typer",
@@ -137,7 +137,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.88
+      "duration_s": 2.94
     },
     {
       "repo_id": "httpie",
@@ -169,7 +169,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.44
+      "duration_s": 2.51
     },
     {
       "repo_id": "httpie",
@@ -185,7 +185,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.52
+      "duration_s": 2.77
     },
     {
       "repo_id": "httpie",
@@ -201,7 +201,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.53
+      "duration_s": 2.39
     },
     {
       "repo_id": "httpie",
@@ -235,7 +235,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.31
+      "duration_s": 2.56
     },
     {
       "repo_id": "pip-tools",
@@ -251,7 +251,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.64
+      "duration_s": 3.11
     },
     {
       "repo_id": "pip-tools",
@@ -267,7 +267,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 3.31
+      "duration_s": 3.05
     },
     {
       "repo_id": "pip-tools",
@@ -283,7 +283,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 3.42
+      "duration_s": 3.14
     },
     {
       "repo_id": "pip-tools",
@@ -299,7 +299,7 @@
       "severity_checked": false,
       "severity_ok": true,
       "note": "",
-      "duration_s": 3.0
+      "duration_s": 3.03
     },
     {
       "repo_id": "pip-tools",
@@ -315,7 +315,7 @@
       "severity_checked": true,
       "severity_ok": true,
       "note": "",
-      "duration_s": 2.97
+      "duration_s": 2.69
     }
   ],
   "notes": [

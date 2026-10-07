@@ -98,6 +98,60 @@ static review) was run against the completed V0.1 before publish.
 - Audit harness re-run: privacy probe 0 leaks; FP loops 0/10 CLI, 0/5 HTTP;
   stale-bytecode and binary scenarios green; clean-venv install loop green.
 
+## 2026-10-07 — V0.1 Evidence & Trust Hardening
+
+Feature development remains frozen. Goal: eliminate systemic trust issues
+and obtain independent external evidence.
+
+**P0 — canonical signature fingerprint (release blocker fix)**
+`inspect.signature()` raw string comparison produced false positives for
+framework-generated callables (typer.Typer: Doc() default values have
+volatile reprs). Fixed with a structural canonical fingerprint that captures
+only: parameter names, kinds, and presence of defaults/annotations.
+Deterministic across subprocess invocations. Regression tests added.
+
+**P1 — filesystem capture race fix**
+`git clean -fdq` without `-x` did not remove files matched by the repo's
+.gitignore (e.g. `*.txt` in sherlock's .gitignore). Mutation-generated
+files persisted across cases, corrupting baselines. Fixed with
+`git clean -fdqx`.
+
+**P1 — benchmark authoring errors fixed**
+- typer_13: module-level indentation corruption fixed
+- pip_tools_11: command name mutation changed CLI semantics (exit code +
+  stderr side effects); replaced with a help-text mutation
+- pip-tools probe changed from `compile --help` to top-level `--help`
+
+**P1 — historical regression corpus**
+Created `docs/HISTORICAL_REGRESSIONS.md` with 5 real regressions from
+open-source project history (click format_filename, healthchecks status
+type, requests URL encoding, pip-tools strip-extras, httpie auth-type).
+2/5 detected by the tool as configured; 3/5 classified as
+PROBE_COVERAGE_LIMITATION (real regressions that require user-configured
+probes exercising the affected behavior).
+
+**P0 — benchmark set hygiene**
+All 8 repos reclassified as `validation` corpus. The previous "holdout"
+was examined and iterated on, so it is no longer a valid holdout. A fresh
+holdout must be selected before the next release. Protocol documented.
+
+**P1 — independent agent validation**
+`docs/INDEPENDENT_AGENT_VALIDATION.md` created with a 10-task protocol.
+Status: NOT EXECUTED (no independent agent CLI available). Self-dogfooding
+(5 tasks on flaskr) documented as a lower-confidence signal.
+
+**Final benchmark results (validation corpus, all fixes deployed)**
+
+| Set | Repos | Cases | Recall | FPR | Severity | Verdict |
+|---|---|---|---|---|---|---|
+| Development+Validation | 5 | 38 | 100% | 0% | 100% | 100% |
+| Holdout (previous) | 3 | 18 | 66.67% | 0% | 100% | 88.89% |
+
+Note: the holdout was run once before reclassification. The 2 missed cases
+are typer_13 (authoring error, now fixed) and pip_tools_11 (authoring
+error, now fixed).
+
+
 ## 2026-10-05 — Git repo + first real remote CI runs
 
 Repository initialized and pushed to

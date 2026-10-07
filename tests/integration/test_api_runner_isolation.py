@@ -43,3 +43,46 @@ def test_api_runner_module_import_uses_isolated_cwd(tmp_path):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["ok"] is True, payload["error"]
     assert payload["symbols"]["BENCHMARK_CONST"]["kind"] == "int"
+
+
+def test_canonical_signature_deterministic_across_subprocesses():
+    """P0 fix: framework-generated callables (e.g. typer.Typer) must produce
+    the same canonical fingerprint across subprocess invocations."""
+    import subprocess
+
+    script = (
+        "import sys; sys.path.insert(0, r'D:\Regression Firewall Skill')\n"
+        "import typer\n"
+        "from regression_firewall.capture._api_runner import _canonical_signature\n"
+        "print(_canonical_signature(typer.Typer))\n"
+    )
+    sigs = set()
+    for _ in range(3):
+        proc = subprocess.run(
+            [r"C:\regfw-bench\venvs\typer\Scripts\python.exe", "-c", script],
+            capture_output=True, text=True, timeout=30,
+            cwd=r"C:\regfw-bench\repos\typer",
+        )
+        sigs.add(proc.stdout.strip())
+    assert len(sigs) == 1, f"nondeterministic: {sigs}"
+
+
+def test_canonical_signature_detects_real_changes():
+    """The canonical fingerprint must still detect real signature changes."""
+    import sys
+    sys.path.insert(0, r"D:\Regression Firewall Skill")
+    from regression_firewall.capture._api_runner import _canonical_signature
+
+    def func_before(a, b=1, *, c="x"):
+        pass
+
+    def func_after(a, b, *, c="x", d=None):
+        pass
+
+    sig_before = _canonical_signature(func_before)
+    sig_after = _canonical_signature(func_after)
+    assert sig_before != sig_after, "real signature change not detected"
+    # `b` went from having a default to not having one → structural change
+    assert "=" in sig_before and "=" not in sig_after.split(",")[1]
+    # `d` was added as a keyword param with a default
+    assert "d=" in sig_after

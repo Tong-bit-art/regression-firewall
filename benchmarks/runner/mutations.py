@@ -35,7 +35,9 @@ def restore(project_root: Path, repo_root: Path, excludes: list | None = None) -
     if run.returncode != 0:
         raise MutationError(f"git checkout failed: {run.stderr[:200]}")
     excludes = excludes or []
-    clean_args = ["clean", "-fdq"]
+    # -x: also remove ignored files (e.g. *.txt matched by repo .gitignore) —
+    # without -x, mutation-generated files persist and corrupt baselines
+    clean_args = ["clean", "-fdqx"]
     for pattern in excludes + [".regression-firewall", ".regression-firewall.yml"]:
         clean_args += ["--exclude", pattern]
     clean = _git(clean_args, project_root if project_root.exists() else repo_root)

@@ -14,7 +14,7 @@ repos:
   commit_sha: d73fa1cdcb
   license: BSD-3-Clause
   python_version: '3.11'
-  split: development
+  split: validation
   project_root: examples/tutorial/flaskr
   setup_cwd: ..
   clean_excludes:
@@ -77,7 +77,7 @@ repos:
   commit_sha: 0968fa2198
   license: BSD-3-Clause
   python_version: '3.14'
-  split: development
+  split: validation
   project_root: .
   venv_command:
   - py
@@ -167,7 +167,7 @@ repos:
   commit_sha: 611c6162cb
   license: Apache-2.0
   python_version: '3.11'
-  split: development
+  split: validation
   project_root: .
   setup_commands:
   - - -m
@@ -202,7 +202,7 @@ repos:
   commit_sha: 2247b35ea1
   license: BSD-3-Clause
   python_version: '3.11'
-  split: development
+  split: validation
   project_root: .
   setup_commands:
   - - -m
@@ -235,7 +235,7 @@ repos:
   commit_sha: e40a45ec2a
   license: MIT
   python_version: '3.11'
-  split: development
+  split: validation
   project_root: .
   clean_excludes: []
   setup_commands:
@@ -277,7 +277,7 @@ repos:
   commit_sha: a80f6e5ecd
   license: MIT
   python_version: '3.11'
-  split: holdout
+  split: validation
   project_root: .
   setup_commands:
   - - -m
@@ -322,7 +322,7 @@ repos:
   commit_sha: 5b604c37c6
   license: BSD-3-Clause
   python_version: '3.11'
-  split: holdout
+  split: validation
   project_root: .
   setup_commands:
   - - -m
@@ -364,7 +364,7 @@ repos:
   commit_sha: 28538e4385
   license: BSD-3-Clause
   python_version: '3.11'
-  split: holdout
+  split: validation
   project_root: .
   setup_commands:
   - - -m
@@ -377,7 +377,6 @@ repos:
   - '{venv_python}'
   - -m
   - piptools
-  - compile
   - --help
   supported_surfaces:
   - cli
@@ -395,7 +394,6 @@ repos:
           - '{venv_python}'
           - -m
           - piptools
-          - compile
           - --help
           files:
           - piptools_benchmark_marker.txt

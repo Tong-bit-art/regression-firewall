@@ -15,6 +15,54 @@ import pkgutil
 import sys
 
 
+
+def _canonical_signature(obj) -> str | None:
+    """Produce a stable, canonical fingerprint of a callable's signature.
+
+    Raw ``str(inspect.signature(obj))`` is nondeterministic for framework
+    callables whose default values contain objects with volatile reprs
+    (e.g. ``Doc()`` instances). This function captures only the structural
+    aspects: parameter names, kinds, and presence of defaults/annotations.
+
+    Returns ``"<signature unavailable>"`` if the signature cannot be
+    deterministically captured.
+    """
+    try:
+        sig = inspect.signature(obj)
+    except (ValueError, TypeError):
+        return "<signature unavailable>"
+
+    parts = []
+    for param in sig.parameters.values():
+        piece = param.name
+        if param.kind is not inspect.Parameter.POSITIONAL_ONLY:
+            pass  # name alone distinguishes
+        elif param.name.startswith("/"):
+            piece = f"/{param.name}"
+        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            piece = f"*{param.name}"
+        elif param.kind is inspect.Parameter.VAR_KEYWORD:
+            piece = f"**{param.name}"
+        elif param.kind is inspect.Parameter.KEYWORD_ONLY:
+            piece = f" {param.name}"
+
+        # Default presence (not the value — values may be nondeterministic)
+        if param.default is not inspect.Parameter.empty:
+            piece += "="
+
+        # Annotation presence (not the annotation text — may be volatile)
+        if param.annotation is not inspect.Parameter.empty:
+            piece += ":"
+
+        parts.append(piece)
+
+    ret = ""
+    if sig.return_annotation is not inspect.Parameter.empty:
+        ret = "->"
+
+    return "(" + ", ".join(parts) + ")" + ret
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--module", required=True)
@@ -72,10 +120,7 @@ def main() -> int:
             kind = type(obj).__name__
         signature = None
         if kind in ("function", "class"):
-            try:
-                signature = str(inspect.signature(obj))
-            except (ValueError, TypeError):
-                signature = "<signature unavailable>"
+            signature = _canonical_signature(obj)
         symbols[name] = {"kind": kind, "signature": signature}
 
     submodules = []
