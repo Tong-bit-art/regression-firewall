@@ -138,7 +138,7 @@ def ensure_venv(repo: dict, workspace: Path, wheel: Path, executor,
     for sp in glob.glob(str(venv_dir / "Lib" / "site-packages" / "regression_firewall*")) +              glob.glob(str(venv_dir / "lib" / "site-packages" / "regression_firewall*")):
         shutil.rmtree(sp, ignore_errors=True)
 
-    install = executor.run([str(venv_python), "-m", "pip", "install", "--quiet", str(wheel)],
+    install = executor.run([str(venv_python), "-m", "pip", "install", "--quiet", "--no-cache-dir", str(wheel)],
                            setup_cwd, phase="setup")
     if not install.ok:
         raise RuntimeError(f"wheel install failed: {install.stderr[-400:]}")

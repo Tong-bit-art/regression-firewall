@@ -1,0 +1,50 @@
+cases:
+- id: bottle_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: bottle_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: bottle.py
+    find: 'def tob(s, enc=''utf8''):'
+    replace: 'def tob(s, enc=''utf8''):  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: bottle_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: bottle.py
+    find: "def tob(s, enc='utf8'):"
+    replace: "def _tob(s, enc='utf8'):"
+  expected:
+    changes:
+    - {surface: public_api, target: "bottle.tob", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: bottle_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: bottle.py
+    find: "def makelist(data):  # This is just too handy"
+    replace: "def makelist(data, separator=None):  # This is just too handy"
+  expected:
+    changes:
+    - {surface: public_api, target: "bottle.makelist", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: bottle_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: bottle.py
+    find: "def makelist(data):  # This is just too handy"
+    replace: "def benchmark_added() -> str:\n    return 'added'\n\n\ndef makelist(data):  # This is just too handy"
+  expected:
+    changes:
+    - {surface: public_api, target: "bottle.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS

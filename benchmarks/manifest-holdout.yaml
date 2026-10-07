@@ -1,0 +1,82 @@
+# FRESH FINAL HOLDOUT — frozen 2026-10-07
+# Frozen implementation commit: 8428a5b13cdd9d54807ee17a23ddbaef61173454
+# These repos have NEVER been used for development, debugging, benchmark
+# design, mutation design, or rule adjustment.
+# This holdout must be run ONCE. If it exposes bugs, fix them and create
+# a NEW fresh holdout — never re-run the same holdout after fixes.
+schema_version: 1
+python_version: "3.11"
+notes:
+- "FRESH FINAL HOLDOUT — independent of all development and validation work."
+- "Frozen implementation: 8428a5b13cdd9d54807ee17a23ddbaef61173454"
+- "Run ONCE. Original results are final regardless of pass/fail."
+
+repos:
+- id: bottle
+  repo_url: https://github.com/bottlepy/bottle
+  commit_sha: cbd569c447
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - -m pip install --quiet -e .
+  verify_command: ["{venv_python}", "-c", "import bottle; print(bottle.__version__)"]
+  supported_surfaces: [public_api]
+  known_requirements: "no third-party dependencies"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: bottle
+          module: bottle
+
+- id: urllib3
+  repo_url: https://github.com/urllib3/urllib3
+  commit_sha: a164d79c8c
+  license: Apache-2.0
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - -m pip install --quiet -e .
+  verify_command: ["{venv_python}", "-c", "import urllib3; print(urllib3.__version__)"]
+  supported_surfaces: [public_api]
+  known_requirements: "certifi/idna installed transitively"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: urllib3
+          module: urllib3
+
+- id: packaging
+  repo_url: https://github.com/pypa/packaging
+  commit_sha: 2aada00b15
+  license: Apache-2.0 OR BSD-2-Clause
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - -m pip install --quiet -e .
+  verify_command: ["{venv_python}", "-c", "from packaging.version import parse; print(parse('1.0'))"]
+  supported_surfaces: [public_api]
+  known_requirements: "no third-party dependencies"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: packaging
+          module: packaging

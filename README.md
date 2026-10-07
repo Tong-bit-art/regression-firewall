@@ -214,25 +214,46 @@ severity_overrides:       # "category" or "surface:category"
 
 See [docs/NORMALIZATION.md](docs/NORMALIZATION.md) for the full rule catalog.
 
-## Evals
+## Evals & Evidence
 
-The `evals/` suite plants 20 hand-built regressions (status flips, removed
-fields, type changes, exit-code flips, symbol removals, noise cases, intent
-cases) into miniature real projects and runs the actual CLI end-to-end.
+Regression Firewall's detection is limited to behavior surfaces exercised
+by configured probes. It cannot detect behavior that no probe covers.
 
-**Bundled results: 20/20 V0.1 evaluation cases passed.** These are synthetic
-cases authored alongside the tool — they demonstrate the detection pipeline
-works as designed, not real-world detection accuracy:
+### Bundled eval (synthetic)
 
-| Bundled metric | Value |
+20 hand-built cases: status flips, removed fields, type changes, exit-code
+flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
+
+**20/20 passed.** See [docs/EVALS.md](docs/EVALS.md).
+
+### Validation corpus (real projects)
+
+8 pinned open-source repos (Flask, Django, Click, argparse, Typer, pip-tools).
+66 cases with planted regressions and controls.
+
+| Metric | Value |
 |---|---|
-| Cases passed | 20 / 20 |
-| Planted-regression detection recall (within these cases) | 100% |
-| False-positive rate (within these cases) | 0% |
-| Verdict accuracy (within these cases) | 100% |
+| Detection recall | **93.10%** |
+| False positive rate (after triage) | **0%** |
+| Severity accuracy | **100%** |
 
-Reproduce with `python -m evals.runner`. Methodology:
-[docs/EVALS.md](docs/EVALS.md).
+### Historical regressions (real bugs)
+
+5 real regressions from open-source history. 2 detected; 3 require probe
+coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HISTORICAL_REGRESSIONS.md).
+
+### Fresh holdout (never used for development)
+
+3 new repos (bottle, urllib3, packaging). Run once. See
+[docs/FINAL_HOLDOUT.md](docs/FINAL_HOLDOUT.md) and
+[docs/FINAL_EVIDENCE_REPORT.md](docs/FINAL_EVIDENCE_REPORT.md).
+
+### What Regression Firewall does not prove
+
+- It cannot detect behavior that no configured probe exercises.
+- It is not a replacement for unit/integration testing.
+- It is not production observability.
+- It does not prove semantic equivalence of arbitrary programs.
 
 ## Limitations (honest list)
 

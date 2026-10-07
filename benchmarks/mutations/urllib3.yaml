@@ -1,0 +1,60 @@
+cases:
+- id: urllib3_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+- id: urllib3_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: src/urllib3/__init__.py
+    find: from ._version import __version__
+    replace: 'from ._version import __version__  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+- id: urllib3_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: src/urllib3/__init__.py
+    find: from .filepost import _TYPE_FIELDS, encode_multipart_formdata
+    replace: from .filepost import _TYPE_FIELDS
+  expected:
+    changes:
+    - surface: public_api
+      target: urllib3.encode_multipart_formdata
+      category: symbol_removed
+      classification: unexpected
+      severity: critical
+    verdict: BLOCK
+- id: urllib3_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: src/urllib3/__init__.py
+    find: "def request(\n    method: str,\n    url: str,"
+    replace: "def request(\n    method: str,\n    url: str,\n    *,\n    new_required_param,"
+    replace_all: false
+  expected:
+    changes:
+    - surface: public_api
+      target: urllib3.request
+      category: signature_changed
+      classification: unexpected
+      severity: medium
+    verdict: REVIEW
+- id: urllib3_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: src/urllib3/__init__.py
+    find: from .util.request import make_headers
+    replace: "from .util.request import make_headers\n\n\ndef benchmark_added() ->\
+      \ str:\n    return 'added'"
+  expected:
+    changes:
+    - surface: public_api
+      target: urllib3.benchmark_added
+      category: symbol_added
+      classification: uncertain
+      severity: info
+    verdict: PASS
