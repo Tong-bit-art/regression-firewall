@@ -58,10 +58,12 @@ changes the user requested — before you run check:
 ```
 
 Fields per entry: `surface` (`http` | `cli` | `public_api` or `*`),
-`target` (probe id, glob allowed), `category` (e.g. `status_changed`,
-`field_added`, `field_removed`, `exit_code_changed`, `symbol_removed`,
-`signature_changed`, or `*`), optional `path` (JSON path without the `$.`
-prefix, glob allowed), optional `before`/`after` value constraints, and a
+`target` (glob allowed — HTTP/CLI probe ids, or the dotted symbol path
+`module.symbol` for `public_api` changes, e.g. `requests.api.get`),
+`category` (e.g. `status_changed`, `field_added`, `field_removed`,
+`exit_code_changed`, `symbol_removed`, `signature_changed`, or `*`),
+optional `path` (JSON path without the `$.` prefix, glob allowed; unused for
+`public_api` changes), optional `before`/`after` value constraints, and a
 short `note`.
 
 Rules for intent:

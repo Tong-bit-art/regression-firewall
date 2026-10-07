@@ -172,6 +172,12 @@ the agent's rules/instructions. The skill teaches the agent the workflow
 
 `check` exit codes for scripting: `0` PASS · `1` REVIEW · `3` BLOCK · `2` usage error · `70` runtime error.
 
+For the `public_api` surface, run the tool where your project's code is
+importable: introspection uses the interpreter that runs
+`regression-firewall`, so install it into the project's virtualenv (or run
+it with that interpreter). Otherwise API probes may import a different copy
+of the package — or fail.
+
 ## Commands
 
 | Command | Purpose |

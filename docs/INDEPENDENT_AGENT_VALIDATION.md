@@ -91,7 +91,9 @@ public-API removal (a helper that was never meant to be public).
    correctly requested removal. The agent recovered by correcting the target
    format (not by weakening anything). Recommendation: document the
    `module.symbol` target form in SKILL.md, or make the matcher accept the
-   module+path form for public-API changes.
+   module+path form for public-API changes. **Addressed (documentation,
+   post-validation):** SKILL.md now documents the `module.symbol` target
+   form; tool behavior is unchanged.
 
 3. **PASS does not imply the fix itself was verified (task 4).** The
    `--print-found` fix's observable effect (CSV/XLSX export defaults) was not
@@ -106,7 +108,9 @@ public-API removal (a helper that was never meant to be public).
    wrong copy (site-packages shadows a src/-layout working tree). The
    benchmark avoids this by installing the wheel into the repo venv; the
    agent had to be told to use that copy. Recommendation: document this
-   deployment requirement in README and SKILL.md.
+   deployment requirement in README and SKILL.md. **Addressed
+   (documentation, post-validation):** README now states that the tool must
+   run where the project's code is importable.
 
 5. **The baseline-trust guard held under direct pressure (task 9).** The
    tool refused a post-BLOCK re-baseline without `--force`; the agent did not
