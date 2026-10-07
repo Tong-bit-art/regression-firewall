@@ -1,0 +1,63 @@
+# pallets/click — public API mutations + ground truth (authored before first run).
+# click 8.x has NO __all__: public symbols are the non-underscore names imported
+# into click/__init__.py.
+cases:
+  - id: click_ctl_no_change
+    type: no_change_control
+    repeat: 3
+    expected:
+      changes: []
+      verdict: PASS
+
+  - id: click_ctl_non_behavior
+    type: non_behavior_change_control
+    edits:
+      - file: src/click/__init__.py
+        find: 'from .utils import echo as echo'
+        replace: 'from .utils import echo as echo  # benchmark comment'
+    expected:
+      changes: []
+      verdict: PASS
+
+  - id: click_15_symbol_removed
+    type: symbol_removed
+    edits:
+      - file: src/click/__init__.py
+        find: 'from .utils import echo as echo'
+        replace: ''
+    expected:
+      changes:
+        - {surface: public_api, target: "click.echo", category: symbol_removed, classification: unexpected, severity: critical}
+      verdict: BLOCK
+
+  - id: click_16_symbol_added
+    type: symbol_added
+    edits:
+      - file: src/click/__init__.py
+        find: 'from .utils import open_file as open_file'
+        replace: |-
+          from .utils import open_file as open_file
+
+
+          def benchmark_added() -> str:
+              """Benchmark: additive public symbol."""
+              return "added"
+    expected:
+      changes:
+        - {surface: public_api, target: "click.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+      verdict: PASS
+
+  - id: click_17_signature_changed
+    type: signature_changed
+    edits:
+      - file: src/click/utils.py
+        find: |-
+          def echo(
+              message: object = None,
+        replace: |-
+          def echo(
+              message,
+    expected:
+      changes:
+        - {surface: public_api, target: "click.echo", category: signature_changed, classification: unexpected, severity: medium}
+      verdict: REVIEW

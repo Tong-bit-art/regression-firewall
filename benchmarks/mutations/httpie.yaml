@@ -1,0 +1,39 @@
+cases:
+- id: httpie_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: httpie_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: httpie/__main__.py
+    find: 'def main():'
+    replace: 'def main():  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: httpie_12_stderr_introduced
+  type: stderr_introduced
+  edits:
+  - file: httpie/__main__.py
+    find: 'def main():'
+    replace: "import sys as _sys\nprint('benchmark: stderr line', file=_sys.stderr)\n\n\ndef main():"
+  expected:
+    changes:
+    - {surface: cli, category: stderr_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: httpie_13_generated_file
+  type: generated_file_added
+  edits:
+  - file: httpie/__main__.py
+    find: 'def main():'
+    replace: "from pathlib import Path as _Path\n_Path('httpie_benchmark_marker.txt').write_text('benchmark')\n\n\ndef main():"
+  expected:
+    changes:
+    - {surface: cli, category: file_created, classification: uncertain, severity: medium}
+    verdict: REVIEW

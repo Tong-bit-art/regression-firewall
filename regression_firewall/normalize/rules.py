@@ -64,8 +64,8 @@ def looks_like_epoch(value) -> bool:
         return EPOCH_SECONDS_MIN <= value <= EPOCH_SECONDS_MAX or (
             EPOCH_MILLIS_MIN <= value <= EPOCH_MILLIS_MAX
         )
-    if isinstance(value, str) and value.isdigit():
-        return looks_like_epoch(int(value))
+    if isinstance(value, str) and value.replace(".", "", 1).isdigit():
+        return looks_like_epoch(float(value))
     return False
 
 

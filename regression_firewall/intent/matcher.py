@@ -49,10 +49,16 @@ def classify_change(change: Change, intent: Intent) -> tuple:
 
 
 def _intent_path(path) -> str:
-    """Changes carry JSON paths like '$.user.name'; intent files refer to the
-    same location as 'user.name' (header names have no prefix either way)."""
+    """Changes carry JSON paths like '$.user.items[0].name'; intent files
+    refer to the same location as 'user.items.*.name': the '$.' prefix is
+    stripped and bracket array indices become dotted segments so '*' can
+    match them (header names have no prefix either way)."""
+    import re
+
     text = path or ""
-    return text[2:] if text.startswith("$.") else text
+    if text.startswith("$."):
+        text = text[2:]
+    return re.sub(r"\[(\d+)\]", r".", text)
 
 
 def _values_equal(change_value, intent_value) -> bool:

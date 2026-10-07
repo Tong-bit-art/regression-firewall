@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-05T16:51:56+00:00",
+  "isolation": "local-scrubbed-env",
+  "tool_version": "0.1.0",
+  "python_version": "3.11.9",
+  "os": "Windows-10-10.0.26200-SP0",
+  "manifest_hash": "b7241fc56f94c17f1eecb43775bbe322ccd83345",
+  "metrics": {
+    "cases_total": 1,
+    "cases_ran_to_verdict": 0,
+    "repository_setup_failures": 1,
+    "infrastructure_failures": 0,
+    "mutation_failures": 0,
+    "timeouts": 0,
+    "planted_regression_cases": 0,
+    "detected_regressions": 0,
+    "missed_regressions": 0,
+    "false_positives": 0,
+    "noise_or_control_cases": 0,
+    "noise_or_control_clean": 0,
+    "detection_recall": null,
+    "false_positive_rate": null,
+    "severity_accuracy": null,
+    "verdict_accuracy": null
+  },
+  "cases": [
+    {
+      "repo_id": "healthchecks",
+      "case_id": "healthchecks_apikey",
+      "case_type": "setup",
+      "case_class": "REPOSITORY_SETUP_FAILURE",
+      "expected_verdict": "",
+      "detected_verdict": "",
+      "verdict_ok": false,
+      "missing": [],
+      "extras": [],
+      "false_positive_count": 0,
+      "severity_checked": false,
+      "severity_ok": false,
+      "note": "could not obtain API key",
+      "duration_s": 0.0
+    }
+  ],
+  "notes": [
+    "SECURITY LIMITATION: no Docker on this machine; LocalExecutor with a",
+    "scrubbed environment is used and recorded per-run. See BENCHMARK_DESIGN.md.",
+    "FastAPI-app exclusion: no small self-contained offline-runnable FastAPI",
+    "application met the selection criteria this round; the HTTP surface is",
+    "covered by two real WSGI apps (flaskr, healthchecks) instead.",
+    "healthchecks runs on Python 3.14 (Django 6.1 requires >= 3.12); the",
+    "venv_command override below is machine-specific and documented here."
+  ]
+}

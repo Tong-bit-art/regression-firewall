@@ -1,0 +1,405 @@
+schema_version: 1
+python_version: '3.11'
+notes:
+- 'SECURITY LIMITATION: no Docker on this machine; LocalExecutor with a'
+- scrubbed environment is used and recorded per-run. See BENCHMARK_DESIGN.md.
+- 'FastAPI-app exclusion: no small self-contained offline-runnable FastAPI'
+- application met the selection criteria this round; the HTTP surface is
+- covered by two real WSGI apps (flaskr, healthchecks) instead.
+- healthchecks runs on Python 3.14 (Django 6.1 requires >= 3.12); the
+- venv_command override below is machine-specific and documented here.
+repos:
+- id: flaskr
+  repo_url: https://github.com/pallets/flask
+  commit_sha: d73fa1cdcb
+  license: BSD-3-Clause
+  python_version: '3.11'
+  split: development
+  project_root: examples/tutorial/flaskr
+  setup_cwd: ..
+  clean_excludes:
+  - instance
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - flask
+  - - -m
+    - flask
+    - --app
+    - flaskr
+    - init-db
+  verify_command:
+  - '{venv_python}'
+  - -c
+  - from flaskr import create_app; create_app(); print('ok')
+  supported_surfaces:
+  - http
+  known_requirements: SQLite (instance dir), flask installed into the repo venv
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: true
+        server:
+          command:
+          - '{venv_python}'
+          - -m
+          - flask
+          - --app
+          - flaskr
+          - run
+          - --host
+          - 127.0.0.1
+          - --port
+          - '{port}'
+          cwd: ..
+        base_url: http://127.0.0.1:{port}
+        ready_path: /auth/login
+        probes:
+        - id: GET /auth/login
+          method: GET
+          path: /auth/login
+        - id: GET /
+          method: GET
+          path: /
+        - id: GET /1/update
+          method: GET
+          path: /1/update
+          follow_redirects: false
+      cli:
+        enabled: false
+      public_api:
+        enabled: false
+- id: healthchecks
+  repo_url: https://github.com/healthchecks/healthchecks
+  commit_sha: 0968fa2198
+  license: BSD-3-Clause
+  python_version: '3.14'
+  split: development
+  project_root: .
+  venv_command:
+  - py
+  - -V:Astral/CPython3.14.3
+  - -m
+  - venv
+  clean_excludes:
+  - hc.sqlite
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - Django[argon2]==6.1.1
+    - django-compressor==4.6
+    - django-stubs-ext==6.1.2
+    - cronsim==2.7
+    - oncalendar==1.1
+    - fido2==2.2.1
+    - pyotp==2.10.0
+    - PyJWT[crypto]==2.15.1
+    - pydantic==2.13.5
+    - aiosmtpd==1.4.6
+    - whitenoise
+    - pycurl
+    - statsd
+    - segno
+    - croniter
+    - requests
+    - minio
+    - django-stubs-ext
+  - - manage.py
+    - migrate
+    - --noinput
+    - --skip-checks
+  api_key_command:
+  - '{venv_python}'
+  - manage.py
+  - shell
+  - -c
+  - from django.contrib.auth.models import User; from hc.accounts.models import Project;
+    u,_ = User.objects.get_or_create(username='benchmark'); p,_ = Project.objects.get_or_create(owner=u,
+    name='benchmark'); from hc.api.models import Check; Check.objects.get_or_create(project=p,
+    name='benchmark'); k = p.set_api_key(); p.save(); print(k)
+  verify_command:
+  - '{venv_python}'
+  - manage.py
+  - check
+  - --deploy
+  - --fail-level
+  - ERROR
+  env:
+    ALLOWED_HOSTS: 127.0.0.1,localhost
+  supported_surfaces:
+  - http
+  known_requirements: 'requirements.txt trimmed to runtime-critical deps (psycopg/pycurl
+    excluded: no local Postgres, Windows build risk); SQLite default DB'
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: true
+        server:
+          command:
+          - '{venv_python}'
+          - manage.py
+          - runserver
+          - 127.0.0.1:{port}
+          - --noreload
+        base_url: http://127.0.0.1:{port}
+        ready_path: /api/v1/checks/
+        probes:
+        - id: GET /api/v1/checks/
+          method: GET
+          path: /api/v1/checks/
+          headers:
+            X-Api-Key: '{api_key}'
+        - id: GET /api/v1/checks/ (no key)
+          method: GET
+          path: /api/v1/checks/
+      cli:
+        enabled: false
+      public_api:
+        enabled: false
+- id: requests
+  repo_url: https://github.com/psf/requests
+  commit_sha: 611c6162cb
+  license: Apache-2.0
+  python_version: '3.11'
+  split: development
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -c
+  - import requests; print(requests.__version__)
+  supported_surfaces:
+  - public_api
+  known_requirements: charset_normalizer/idna/urllib3/certifi installed transitively
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: false
+      public_api:
+        enabled: true
+        probes:
+        - id: requests
+          module: requests
+        - id: requests.api
+          module: requests.api
+- id: click
+  repo_url: https://github.com/pallets/click
+  commit_sha: 2247b35ea1
+  license: BSD-3-Clause
+  python_version: '3.11'
+  split: development
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -c
+  - import click; print(click.__version__)
+  supported_surfaces:
+  - public_api
+  known_requirements: no third-party dependencies
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: false
+      public_api:
+        enabled: true
+        probes:
+        - id: click
+          module: click
+- id: sherlock
+  repo_url: https://github.com/sherlock-project/sherlock
+  commit_sha: e40a45ec2a
+  license: MIT
+  python_version: '3.11'
+  split: development
+  project_root: .
+  clean_excludes: []
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -m
+  - sherlock_project
+  - --version
+  supported_surfaces:
+  - cli
+  known_requirements: probe runs --version only (offline); the tool itself queries
+    sites at runtime, never during the benchmark
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: true
+        probes:
+        - id: sherlock-version
+          command:
+          - '{venv_python}'
+          - -m
+          - sherlock_project
+          - --version
+          files:
+          - sherlock_benchmark_marker.txt
+      public_api:
+        enabled: false
+- id: typer
+  repo_url: https://github.com/fastapi/typer
+  commit_sha: a80f6e5ecd
+  license: MIT
+  python_version: '3.11'
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -c
+  - import typer; print(typer.__version__)
+  supported_surfaces:
+  - public_api
+  - cli
+  known_requirements: click + typing-extensions installed transitively
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: true
+        probes:
+        - id: typer-help
+          command:
+          - '{venv_python}'
+          - -m
+          - typer
+          - --help
+          files:
+          - typer_benchmark_marker.txt
+      public_api:
+        enabled: true
+        probes:
+        - id: typer
+          module: typer
+  clean_excludes:
+  - typer_benchmark_marker.txt
+- id: httpie
+  repo_url: https://github.com/httpie/cli
+  commit_sha: 5b604c37c6
+  license: BSD-3-Clause
+  python_version: '3.11'
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -m
+  - httpie
+  - --version
+  supported_surfaces:
+  - cli
+  known_requirements: probe runs --version only (offline)
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: true
+        probes:
+        - id: httpie-version
+          command:
+          - '{venv_python}'
+          - -m
+          - httpie
+          - --version
+          files:
+          - httpie_benchmark_marker.txt
+      public_api:
+        enabled: false
+  clean_excludes:
+  - httpie_benchmark_marker.txt
+- id: pip-tools
+  repo_url: https://github.com/jazzband/pip-tools
+  commit_sha: 28538e4385
+  license: BSD-3-Clause
+  python_version: '3.11'
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command:
+  - '{venv_python}'
+  - -m
+  - piptools
+  - compile
+  - --help
+  supported_surfaces:
+  - cli
+  known_requirements: probe runs compile --help only (offline)
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: false
+      cli:
+        enabled: true
+        probes:
+        - id: pip-compile-help
+          command:
+          - '{venv_python}'
+          - -m
+          - piptools
+          - compile
+          - --help
+          files:
+          - piptools_benchmark_marker.txt
+      public_api:
+        enabled: false
+  clean_excludes:
+  - piptools_benchmark_marker.txt

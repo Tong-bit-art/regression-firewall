@@ -1,0 +1,141 @@
+cases:
+- id: flaskr_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+- id: flaskr_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: blog.py
+    find: '"""Show all the posts, most recent first."""'
+    replace: '"""Show all the posts, most recent first.  # benchmark comment"""'
+  expected:
+    changes: []
+    verdict: PASS
+- id: flaskr_02_status_200_to_500
+  type: status_200_to_500
+  edits:
+  - file: blog.py
+    find: '    return render_template("blog/index.html", posts=posts)'
+    replace: "    from flask import abort\n    abort(500)"
+  expected:
+    changes:
+    - surface: http
+      category: status_changed
+      classification: unexpected
+      severity: high
+    expected_extras:
+    - surface: http
+      category: value_changed
+      classification: uncertain
+      severity: '*'
+    verdict: BLOCK
+- id: flaskr_01_status_redirect_to_400
+  type: status_redirect_to_400
+  edits:
+  - file: auth.py
+    find: '            return redirect(url_for("auth.login"))'
+    replace: "            from flask import abort\n            abort(400)"
+  expected:
+    changes:
+    - surface: http
+      category: status_changed
+      classification: unexpected
+      severity: high
+    expected_extras:
+    - surface: http
+      category: value_changed
+      classification: uncertain
+      severity: '*'
+    verdict: BLOCK
+- id: flaskr_07_header_change
+  type: header_change
+  edits:
+  - file: blog.py
+    find: '    return render_template("blog/index.html", posts=posts)'
+    replace: "    from flask import make_response\n    resp = make_response(render_template(\"\
+      blog/index.html\", posts=posts))\n    resp.headers[\"Cache-Control\"] = \"no-store\"\
+      \n    return resp"
+  expected:
+    changes:
+    - surface: http
+      category: header_changed
+      classification: uncertain
+      severity: low
+    verdict: REVIEW
+- id: flaskr_08_timestamp_noise
+  type: timestamp_noise
+  edits:
+  - file: blog.py
+    find: '    return render_template("blog/index.html", posts=posts)'
+    replace: "    import time as _t\n    from flask import make_response\n    resp\
+      \ = make_response(render_template(\"blog/index.html\", posts=posts))\n    resp.headers[\"\
+      X-Benchmark-Timestamp\"] = str(_t.time())\n    return resp"
+  expected:
+    changes: []
+    verdict: PASS
+  apply_before_baseline: true
+- id: flaskr_09_request_id_noise
+  type: request_id_noise
+  edits:
+  - file: blog.py
+    find: '    return render_template("blog/index.html", posts=posts)'
+    replace: "    import uuid as _u\n    from flask import make_response\n    resp\
+      \ = make_response(render_template(\"blog/index.html\", posts=posts))\n    resp.headers[\"\
+      X-Request-ID\"] = str(_u.uuid4())\n    return resp"
+  expected:
+    changes: []
+    verdict: PASS
+  apply_before_baseline: true
+- id: flaskr_19_intent_expected_status
+  type: intent_expected_status
+  edits:
+  - file: auth.py
+    find: '            return redirect(url_for("auth.login"))'
+    replace: "            from flask import abort\n            abort(400)"
+  intent:
+    schema_version: 1
+    task: 'Benchmark intent: the auth redirect is intentionally replaced with a 400.'
+    expected_changes:
+    - surface: http
+      target: GET /1/update
+      category: status_changed
+      before: 302
+      after: 400
+      note: declared intentional for the benchmark
+  expected:
+    changes:
+    - surface: http
+      category: status_changed
+      classification: expected
+      severity: '*'
+    verdict: PASS
+- id: flaskr_20_intent_mismatch_stays_unexpected
+  type: intent_mismatch_status
+  edits:
+  - file: auth.py
+    find: '            return redirect(url_for("auth.login"))'
+    replace: "            from flask import abort\n            abort(400)"
+  intent:
+    schema_version: 1
+    task: Benchmark intent with a deliberately WRONG expectation (after=500).
+    expected_changes:
+    - surface: http
+      target: GET /1/update
+      category: status_changed
+      after: 500
+      note: this expectation does not match reality and must not bless it
+  expected:
+    changes:
+    - surface: http
+      category: status_changed
+      classification: unexpected
+      severity: high
+    expected_extras:
+    - surface: http
+      category: value_changed
+      classification: uncertain
+      severity: '*'
+    verdict: BLOCK

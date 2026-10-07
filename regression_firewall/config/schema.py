@@ -17,6 +17,7 @@ PROBE_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 @dataclass
 class ServerConfig:
     command: list = field(default_factory=list)
+    cwd: str = "."  # relative to the project root
 
 
 @dataclass
@@ -289,8 +290,11 @@ def _parse_http(raw, source: str) -> HttpSurfaceConfig:
     if server_raw is not None:
         if not isinstance(server_raw, dict):
             raise ConfigError(f"{source}: surfaces.http.server must be a mapping")
-        _check_keys(server_raw, {"command"}, "surfaces.http.server", source)
-        cfg.server = ServerConfig(command=_as_str_list(server_raw.get("command", []), "surfaces.http.server.command", source))
+        _check_keys(server_raw, {"command", "cwd"}, "surfaces.http.server", source)
+        cfg.server = ServerConfig(
+            command=_as_str_list(server_raw.get("command", []), "surfaces.http.server.command", source),
+            cwd=_as_str(server_raw.get("cwd", "."), "surfaces.http.server.cwd", source),
+        )
         if not cfg.server.command:
             raise ConfigError(f"{source}: surfaces.http.server.command must be a non-empty list")
     probes_raw = raw.get("probes") or []

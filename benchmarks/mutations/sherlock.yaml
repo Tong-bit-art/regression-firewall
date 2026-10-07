@@ -1,0 +1,71 @@
+cases:
+- id: sherlock_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: sherlock_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: sherlock_project/__main__.py
+    find: '    from sherlock_project import sherlock'
+    replace: '    from sherlock_project import sherlock  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: sherlock_10_exit_0_to_1
+  type: exit_0_to_1
+  edits:
+  - file: sherlock_project/__main__.py
+    find: "    from sherlock_project import sherlock\n    sherlock.main()"
+    replace: "    from sherlock_project import sherlock\n    try:\n        sherlock.main()\n    except SystemExit as _e:\n        raise SystemExit(1 if _e.code in (0, None) else _e.code)"
+  expected:
+    changes:
+    - {surface: cli, category: exit_code_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: sherlock_11_stdout_changed
+  type: stdout_changed
+  edits:
+  - file: sherlock_project/sherlock.py
+    find: '        version=f"{__shortname__} v{__version__}",'
+    replace: '        version=f"{__shortname__} v{__version__} (benchmark)",'
+  expected:
+    changes:
+    - {surface: cli, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: sherlock_12_stderr_introduced
+  type: stderr_introduced
+  edits:
+  - file: sherlock_project/__main__.py
+    find: '    from sherlock_project import sherlock'
+    replace: "    import sys as _sys\n    print(\"benchmark: stderr line\", file=_sys.stderr)\n    from sherlock_project import sherlock"
+  expected:
+    changes:
+    - {surface: cli, category: stderr_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: sherlock_13_generated_file
+  type: generated_file_added
+  edits:
+  - file: sherlock_project/__main__.py
+    find: '    from sherlock_project import sherlock'
+    replace: "    from pathlib import Path as _Path\n    _Path(\"sherlock_benchmark_marker.txt\").write_text(\"benchmark\")\n    from sherlock_project import sherlock"
+  expected:
+    changes:
+    - {surface: cli, category: file_created, classification: uncertain, severity: medium}
+    verdict: REVIEW
+
+- id: sherlock_14_temp_file_noise
+  type: temp_file_noise
+  edits:
+  - file: sherlock_project/__main__.py
+    find: '    from sherlock_project import sherlock'
+    replace: "    import tempfile as _tf\n    _tf.NamedTemporaryFile(prefix=\"regfw-bench\", delete=False, mode=\"w\").write(\"noise\")\n    from sherlock_project import sherlock"
+  expected:
+    changes: []
+    verdict: PASS

@@ -87,6 +87,11 @@ class Normalizer:
 
     # -- Header / cookie maps ------------------------------------------------
 
+    # Header values that are unordered SETS per spec: Django emits these in
+    # nondeterministic order per process, which produced a false positive on
+    # every single response in real-world testing (healthchecks).
+    SET_SEMANTIC_HEADERS = ("access-control-allow-methods", "access-control-allow-headers")
+
     def normalize_headers(self, headers: dict) -> dict:
         ignored = {h.lower() for h in self.ignore.headers}
         out = {}
@@ -94,7 +99,11 @@ class Normalizer:
             low = str(name).lower()
             if low in ignored:
                 continue
-            out[low] = self.normalize_string(str(value), low)
+            text = str(value)
+            if low in self.SET_SEMANTIC_HEADERS:
+                parts = sorted(p.strip() for p in text.split(",") if p.strip())
+                text = ", ".join(parts)
+            out[low] = self.normalize_string(text, low)
         return out
 
     def normalize_cookies(self, cookies: dict) -> dict:

@@ -102,3 +102,16 @@ def test_surface_mismatch():
     other = make_change(category="exit_code_changed", target="deploy", surface="http")
     assert classify_change(change, intent)[0] == "expected"
     assert classify_change(other, intent)[0] == "unexpected"
+
+
+def test_intent_path_bracket_indices_normalized():
+    """Real-world finding: change paths use bracket array indexing
+    ($.checks[0].desc) while intent files use dotted segments — the matcher
+    must treat [0] as a path segment so globs like checks.*.desc match."""
+    intent = intent_from_dict({
+        "expected_changes": [{"surface": "http", "target": "GET /api/v1/checks/",
+                              "category": "field_removed", "path": "checks.*.desc"}],
+    })
+    change = make_change(category="field_removed", target="GET /api/v1/checks/",
+                         path="$.checks[0].desc")
+    assert classify_change(change, intent)[0] == "expected"

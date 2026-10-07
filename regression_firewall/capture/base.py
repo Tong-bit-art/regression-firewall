@@ -27,7 +27,7 @@ def run_capture(config: Config, project_root: Path, artifacts_dir: Path) -> tupl
 
     if config.http.enabled:
         if config.http.probes:
-            from .http import capture_http_probes
+            from .http_probe import capture_http_probes
 
             surfaces["http"], http_warnings = capture_http_probes(
                 config.http, project_root, artifacts_dir, config.redaction

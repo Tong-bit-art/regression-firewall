@@ -1,0 +1,73 @@
+# psf/requests — public API mutations + ground truth (authored before first run).
+cases:
+  - id: requests_ctl_no_change
+    type: no_change_control
+    repeat: 3
+    expected:
+      changes: []
+      verdict: PASS
+
+  - id: requests_ctl_non_behavior
+    type: non_behavior_change_control
+    edits:
+      - file: src/requests/api.py
+        find: '    r"""Sends a HEAD request.'
+        replace: '    r"""Sends a HEAD request. (benchmark comment)'
+    expected:
+      changes: []
+      verdict: PASS
+
+  - id: requests_15_symbol_removed
+    type: symbol_removed
+    edits:
+      - file: src/requests/api.py
+        find: 'def head(url: _t.UriType, **kwargs: Unpack[_t.RequestKwargs]) -> Response:'
+        replace: ''
+      - file: src/requests/__init__.py
+        find: 'from .api import delete, get, head, options, patch, post, put, request'
+        replace: 'from .api import delete, get, options, patch, post, put, request'
+      - file: src/requests/__init__.py
+        find: '    "head",'
+        replace: ''
+    expected:
+      changes:
+        - {surface: public_api, target: "requests.head", category: symbol_removed, classification: unexpected, severity: critical}
+      expected_extras:
+        - {surface: public_api, category: export_changed, classification: unexpected, severity: "*"}
+        - {surface: public_api, category: symbol_removed, classification: unexpected, severity: "*"}
+      verdict: BLOCK
+
+  - id: requests_16_symbol_added
+    type: symbol_added
+    edits:
+      - file: src/requests/api.py
+        find: |-
+          def request(
+              method: str, url: _t.UriType, **kwargs: Unpack[_t.RequestKwargs]
+          ) -> Response:
+        replace: |-
+          def benchmark_added() -> str:
+              """Benchmark: additive public symbol."""
+              return "added"
+
+
+          def request(
+              method: str, url: _t.UriType, **kwargs: Unpack[_t.RequestKwargs]
+          ) -> Response:
+    expected:
+      changes:
+        - {surface: public_api, target: "requests.api.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+      verdict: PASS
+
+  - id: requests_17_signature_changed
+    type: signature_changed
+    edits:
+      - file: src/requests/api.py
+        find: 'def head(url: _t.UriType, **kwargs: Unpack[_t.RequestKwargs]) -> Response:'
+        replace: 'def head(url: _t.UriType, timeout, **kwargs: Unpack[_t.RequestKwargs]) -> Response:'
+    expected:
+      changes:
+        - {surface: public_api, target: "requests.head", category: signature_changed, classification: unexpected, severity: medium}
+      expected_extras:
+        - {surface: public_api, target: "requests.api.head", category: signature_changed, classification: unexpected, severity: medium}
+      verdict: REVIEW

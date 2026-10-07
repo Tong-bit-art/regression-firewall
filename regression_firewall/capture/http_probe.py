@@ -176,7 +176,13 @@ class ManagedServer:
             base_url = base_url.replace("{port}", str(self.port))
             env["REGFW_SERVER_PORT"] = str(self.port)
 
-        command = [_resolve_interpreter(part) for part in self.cfg.server.command]
+        command = [
+            _resolve_interpreter(
+                part.replace("{port}", str(self.port or ""))
+                if self.port else part
+            )
+            for part in self.cfg.server.command
+        ]
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         # Stale bytecode must never be served: a same-size, same-second edit
         # would otherwise pass pyc validation and produce a false PASS.
@@ -185,9 +191,10 @@ class ManagedServer:
         # when the process is later killed while still alive.
         env["PYTHONUNBUFFERED"] = "1"
         self._log = open(self.log_path, "w", encoding="utf-8")
+        server_cwd = (self.project_root / self.cfg.server.cwd).resolve()
         self._proc = subprocess.Popen(
             command,
-            cwd=str(self.project_root),
+            cwd=str(server_cwd),
             stdout=self._log,
             stderr=subprocess.STDOUT,
             env=env,

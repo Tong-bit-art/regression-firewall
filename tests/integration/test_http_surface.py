@@ -132,3 +132,53 @@ def test_http_surface_server_not_startable(project, run_rf, write):
         (project / ".regression-firewall" / "baseline.json").read_text(encoding="utf-8")
     )
     assert snapshot["surfaces"]["http"][0]["ok"] is False
+
+
+def test_http_server_cwd_config(tmp_path, run_rf, write):
+    """The managed server must honor surfaces.http.server.cwd (relative to
+    the project root) — needed when the app package resolves from a parent
+    directory (e.g. flaskr's `--app flaskr` from examples/tutorial)."""
+    write(tmp_path / "app" / "server.py", """\
+import json, os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = b'{"ok": true}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *a):
+        pass
+
+if __name__ == "__main__":
+    port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+""")
+    write(tmp_path / "app" / ".regression-firewall.yml", """\
+version: 1
+surfaces:
+  http:
+    enabled: true
+    server:
+      command: ["python", "server.py"]
+      cwd: "."
+    base_url: "http://127.0.0.1:{port}"
+    probes:
+      - id: "GET /x"
+        method: GET
+        path: /x
+  cli: {enabled: false}
+  public_api: {enabled: false}
+""")
+    # project root is the PARENT; the app lives one level down and the config
+    # sits there too — server.cwd resolves relative to the project root
+    proc = run_rf(["--project", str(tmp_path / "app"), "baseline"], tmp_path)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    snap = json.loads(
+        (tmp_path / "app" / ".regression-firewall" / "baseline.json").read_text(encoding="utf-8")
+    )
+    assert snap["surfaces"]["http"][0]["ok"] is True

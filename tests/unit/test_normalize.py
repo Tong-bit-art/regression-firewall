@@ -165,3 +165,28 @@ def test_json_path_ignore_nested():
     out = n.normalize_json(value)
     assert out["items"][0]["seed"] == "abc"
     assert out["items"][0]["name"] == "x"
+
+
+def test_cors_headers_order_insensitive():
+    """Real-world finding: Django emits Access-Control-Allow-Methods in
+    nondeterministic set order per process; the header is set-semantic and
+    must not produce a diff."""
+    n = Normalizer(NormalizationConfig(), IgnoreConfig())
+    a = n.normalize_headers({"Access-Control-Allow-Methods": "POST, OPTIONS, GET"})
+    b = n.normalize_headers({"Access-Control-Allow-Methods": "OPTIONS, POST, GET"})
+    assert a == b
+    assert a["access-control-allow-methods"] == "GET, OPTIONS, POST"
+    # non-CORS headers keep their order
+    keep = n.normalize_headers({"Vary": "Accept-Encoding, User-Agent"})
+    assert keep["vary"] == "Accept-Encoding, User-Agent"
+
+
+def test_float_epoch_string_with_temporal_key():
+    """Real-world finding: str(time.time()) under a timestamp-ish key is a
+    float string; it must normalize like integer epochs."""
+    n = Normalizer(NormalizationConfig(), IgnoreConfig())
+    assert n.normalize_json("1791257092.123456", key="x_benchmark_timestamp") == "<TIMESTAMP>"
+    assert n.normalize_headers({"x-benchmark-timestamp": "1791257092.123"}) == \
+        {"x-benchmark-timestamp": "<TIMESTAMP>"}
+    # non-epoch floats stay untouched
+    assert n.normalize_json("3.14", key="ratio") == "3.14"

@@ -1,0 +1,156 @@
+cases:
+- id: healthchecks_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: healthchecks_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: hc/api/views.py
+    find: 'def checks(request: HttpRequest) -> HttpResponse:'
+    replace: 'def checks(request: HttpRequest) -> HttpResponse:  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: healthchecks_01_status_401_to_400
+  type: status_401_to_400
+  edits:
+  - file: hc/api/decorators.py
+    find: 'return error("missing api key", 401)'
+    replace: 'return error("missing api key", 400)'
+    replace_all: true
+  expected:
+    changes:
+    - {surface: http, category: status_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: healthchecks_02_status_200_to_500
+  type: status_200_to_500
+  edits:
+  - file: hc/api/views.py
+    find: '    return JsonResponse({"checks": checks})'
+    replace: '    raise RuntimeError("benchmark mutation")'
+  expected:
+    changes:
+    - {surface: http, category: status_changed, classification: unexpected, severity: high}
+    expected_extras:
+    - {surface: http, category: content_type_changed, classification: unexpected, severity: "*"}
+    - {surface: http, category: header_changed, classification: uncertain, severity: "*"}
+    verdict: BLOCK
+
+- id: healthchecks_03_json_field_removed
+  type: json_field_removed
+  edits:
+  - file: hc/api/models.py
+    find: '            "desc": self.desc,'
+    replace: ''
+  expected:
+    changes:
+    - {surface: http, category: field_removed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: healthchecks_04_json_field_added
+  type: json_field_added
+  edits:
+  - file: hc/api/models.py
+    find: '            "desc": self.desc,'
+    replace: "            \"desc\": self.desc,\n            \"benchmark_field\": \"added\","
+  expected:
+    changes:
+    - {surface: http, category: field_added, classification: uncertain, severity: low}
+    verdict: PASS
+
+- id: healthchecks_05_json_field_type_changed
+  type: json_field_type_changed
+  edits:
+  - file: hc/api/models.py
+    find: '            "grace": int(self.grace.total_seconds()),'
+    replace: '            "grace": str(int(self.grace.total_seconds())),'
+  expected:
+    changes:
+    - {surface: http, category: field_type_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: healthchecks_07_header_change
+  type: header_change
+  edits:
+  - file: hc/api/views.py
+    find: '    return JsonResponse({"checks": checks})'
+    replace: "    response = JsonResponse({\"checks\": checks})\n    response[\"Cache-Control\"] = \"no-store\"\n    return response"
+  expected:
+    changes:
+    - {surface: http, category: header_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: healthchecks_08_timestamp_noise
+  type: timestamp_noise
+  apply_before_baseline: true
+  edits:
+  - file: hc/api/views.py
+    find: '    return JsonResponse({"checks": checks})'
+    replace: "    import time as _t\n    response = JsonResponse({\"checks\": checks})\n    response[\"X-Benchmark-Timestamp\"] = str(_t.time())\n    return response"
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: healthchecks_09_request_id_noise
+  type: request_id_noise
+  apply_before_baseline: true
+  edits:
+  - file: hc/api/views.py
+    find: '    return JsonResponse({"checks": checks})'
+    replace: "    import uuid as _u\n    response = JsonResponse({\"checks\": checks})\n    response[\"X-Request-ID\"] = str(_u.uuid4())\n    return response"
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: healthchecks_19_intent_rename
+  type: intent_expected_rename
+  edits:
+  - file: hc/api/models.py
+    find: '            "desc": self.desc,'
+    replace: '            "description": self.desc,'
+  intent:
+    schema_version: 1
+    task: "Benchmark intent: rename the desc API field to description."
+    expected_changes:
+    - surface: http
+      target: "GET /api/v1/checks/"
+      category: field_removed
+      path: "checks.*.desc"
+      note: "renamed to description"
+    - surface: http
+      target: "GET /api/v1/checks/"
+      category: field_added
+      path: "checks.*.description"
+      note: "renamed from desc"
+  expected:
+    changes:
+    - {surface: http, category: field_removed, classification: expected, severity: "*"}
+    - {surface: http, category: field_added, classification: expected, severity: "*"}
+    verdict: PASS
+
+- id: healthchecks_20_intent_mismatch_stays_unexpected
+  type: intent_mismatch_status
+  edits:
+  - file: hc/api/decorators.py
+    find: 'return error("missing api key", 401)'
+    replace: 'return error("missing api key", 400)'
+    replace_all: true
+  intent:
+    schema_version: 1
+    task: "Benchmark intent with a deliberately WRONG expectation (after=500)."
+    expected_changes:
+    - surface: http
+      target: "GET /api/v1/checks/ (no key)"
+      category: status_changed
+      after: 500
+      note: "this expectation does not match reality and must not bless it"
+  expected:
+    changes:
+    - {surface: http, category: status_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
