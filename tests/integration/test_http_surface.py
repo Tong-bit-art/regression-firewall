@@ -142,6 +142,11 @@ def test_http_server_cwd_config(tmp_path, run_rf, write):
 import json, os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+class QuietHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         body = b'{"ok": true}'
@@ -156,7 +161,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("REGFW_SERVER_PORT", "8931"))
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    QuietHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 """)
     write(tmp_path / "app" / ".regression-firewall.yml", """\
 version: 1
