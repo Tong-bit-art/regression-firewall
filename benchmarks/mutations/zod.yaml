@@ -1,0 +1,51 @@
+cases:
+- id: zod_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: zod_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: src/index.ts
+    find: 'import * as z from "./v4/classic/external.js";'
+    replace: 'import * as z from "./v4/classic/external.js";  // benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: zod_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: src/v4/core/errors.ts
+    find: 'export function treeifyError'
+    replace: 'export function _treeifyError'
+    replace_all: true
+  expected:
+    changes:
+    - {surface: js_api, target: "src/index.ts:treeifyError", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: zod_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: src/v4/classic/compat.ts
+    find: 'export function setErrorMap(map: core.$ZodErrorMap): void {'
+    replace: 'export function setErrorMap(map: core.$ZodErrorMap, context?: unknown): void {'
+  expected:
+    changes:
+    - {surface: js_api, target: "src/index.ts:setErrorMap", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: zod_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: src/v4/classic/compat.ts
+    find: 'export function setErrorMap(map: core.$ZodErrorMap): void {'
+    replace: "export function benchmark_added(): number {\n  return 1;\n}\n\nexport function setErrorMap(map: core.$ZodErrorMap): void {"
+  expected:
+    changes:
+    - {surface: js_api, target: "src/index.ts:benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS

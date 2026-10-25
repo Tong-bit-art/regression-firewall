@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-25
+
+Wider languages and behavior visibility: JS/TS public API surface,
+opt-in CLI behavior tracing, convention-based HTTP discovery.
+
 ### Added
 
 - **JS/TS public API surface (`js_api`).** Static, zero-dependency export

@@ -1,0 +1,50 @@
+cases:
+- id: du_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: du_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: src/dateutil/tz/__init__.py
+    find: 'from .tz import *'
+    replace: 'from .tz import *  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: du_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: src/dateutil/tz/tz.py
+    find: 'def datetime_exists(dt, tz=None):'
+    replace: 'def _datetime_exists(dt, tz=None):'
+  expected:
+    changes:
+    - {surface: public_api, target: "dateutil.tz.datetime_exists", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: du_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: src/dateutil/tz/tz.py
+    find: 'def datetime_exists(dt, tz=None):'
+    replace: 'def datetime_exists(dt, tz=None, resolv=False):'
+  expected:
+    changes:
+    - {surface: public_api, target: "dateutil.tz.datetime_exists", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: du_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: src/dateutil/tz/tz.py
+    find: 'def datetime_exists(dt, tz=None):'
+    replace: "def benchmark_added(dt):\n    return dt\n\n\ndef datetime_exists(dt, tz=None):"
+  expected:
+    changes:
+    - {surface: public_api, target: "dateutil.tz.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS

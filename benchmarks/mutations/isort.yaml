@@ -1,0 +1,61 @@
+# CASE HISTORY (holdout integrity):
+# - isort_10 originally expected TWO exit_code_changed entries (targets fix
+#   AND help). First-run result: exactly one change detected (help), extras
+#   empty, second entry unmatched -> REGRESSION_FIREWALL_FAILURE recorded,
+#   then re-classified as BENCHMARK_ERROR: isort's main() RETURNS normally
+#   (it does not raise SystemExit on success), so under the wrap mutation
+#   the fix probe still exits 0 — verified empirically (fix=0, help=1) —
+#   and a second exit flip is impossible by construction. The tool
+#   correctly reported the one change that actually existed. Expectation
+#   corrected to the single help entry; results from the run carrying this
+#   correction are POST-FIX VALIDATION (no tool code changed between runs).
+cases:
+- id: isort_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: isort_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: isort/__main__.py
+    find: 'from isort.main import main'
+    replace: 'from isort.main import main  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: isort_10_exit_0_to_1
+  type: exit_0_to_1
+  edits:
+  - file: isort/__main__.py
+    find: "from isort.main import main\n\nmain()"
+    replace: "from isort.main import main\n\ntry:\n    main()\nexcept SystemExit as _e:\n    raise SystemExit(1 if _e.code in (0, None) else _e.code)"
+  expected:
+    changes:
+    - {surface: cli, target: help, category: exit_code_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: isort_11_stdout_changed
+  type: stdout_changed
+  edits:
+  - file: isort/main.py
+    find: 'Suppresses verbose output for non-modified files.'
+    replace: 'Suppresses verbose output for untouched files.'
+  expected:
+    changes:
+    - {surface: cli, target: help, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: isort_13_fs_write_added
+  type: generated_file_added
+  edits:
+  - file: isort/__main__.py
+    find: 'from isort.main import main'
+    replace: "from pathlib import Path as _P\n_P(\"bench_marker.txt\").write_text(\"benchmark\")\nfrom isort.main import main"
+  expected:
+    changes:
+    - {surface: cli, target: fix, category: fs_write_added, path: bench_marker.txt, classification: uncertain, severity: medium}
+    verdict: REVIEW

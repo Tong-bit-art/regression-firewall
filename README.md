@@ -304,6 +304,20 @@ flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 5 real regressions from open-source history. 2 detected; 3 require probe
 coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HISTORICAL_REGRESSIONS.md).
 
+### Fresh holdout (V0.3 code, 2026-10-25)
+
+3 new repos never used in development: **zod** (real TypeScript barrel for
+the `js_api` surface — `export *` chains, `.js`→`.ts` specifiers, generic
+clauses), **isort** (CLI + the V0.3 `trace.fs_writes` path), **dateutil**
+(public API, src layout). 21 cases: **recall 100%** (9/9 planted
+regressions), **FPR 0%** (12/12 controls clean), severity and verdict
+accuracy 100%. The one first-run failure was a benchmark authoring error
+(isort's `main()` returns instead of raising SystemExit — verified
+empirically), corrected and documented; parser gaps found while authoring
+the zod corpus were fixed with tests before the manifest froze. See
+[docs/FINAL_HOLDOUT_V03.md](docs/FINAL_HOLDOUT_V03.md). This corpus is now
+consumed; the next release cycle needs a fresh one.
+
 ### Fresh holdout (V0.2 code, 2026-10-25)
 
 3 new repos never used in development (tqdm, attrs, black — CLI, public-API

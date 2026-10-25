@@ -1,0 +1,128 @@
+# FRESH HOLDOUT V0.3 — frozen 2026-10-25, BEFORE its first run.
+# Frozen tool version: 0.2.0+ (main @ ed0a7e2, "V0.3 complete"; version not
+# yet bumped — this holdout gates the 0.3.0 release).
+#
+# Purpose: validate the V0.3 features on real repositories never used for
+# development. Disjoint from all 14 previously used repos (flaskr, flask,
+# healthchecks, requests, click, argparse, typer, pip-tools, httpie,
+# sherlock, bottle, urllib3, packaging, tqdm, attrs, black).
+#
+# Surface coverage rationale (honest):
+# - zod (TypeScript): the js_api surface end-to-end on a real chained
+#   barrel (export * chains, .js->.ts specifier mapping, multi-line named
+#   lists with `type` modifiers, generic function clauses).
+# - isort (Python): CLI surface plus the V0.3 behavior tracing
+#   (trace.fs_writes) — a formatter CLI that writes files in place.
+# - dateutil (Python): public API surface (src/ layout) — core-surface
+#   regression guard.
+# - The HTTP surface and discovery/emit-probes are NOT covered: V0.3 left
+#   HTTP capture/diff untouched; discovery is exercised by integration
+#   tests against a real Flask app. Recorded as coverage notes, not pass
+#   claims.
+#
+# Authoring validation performed BEFORE freezing (repo-side only, no
+# detection runs): zod mutations were previewed with the parser itself
+# (55 -> 54 symbols on rename; signature + added symbol confirmed);
+# isort sample confirmed byte-stable across runs; dateutil import verified
+# after the rename mutation.
+#
+# Run ONCE. If it exposes bugs, fix them and create a NEW fresh holdout —
+# never re-run this holdout after fixes (POST-FIX runs must be labeled).
+
+schema_version: 1
+python_version: "3.11"
+notes:
+- "FRESH HOLDOUT V0.3 — repos disjoint from all prior development/validation."
+- "Frozen tool: main @ ed0a7e2 (post-V0.3). First run 2026-10-25, Windows 11, Python 3.11.9."
+- "No HTTP surface; discovery covered by integration tests (see header)."
+- "SECURITY LIMITATION: no Docker; LocalExecutor with scrubbed env (see docs/BENCHMARK_DESIGN.md)."
+
+repos:
+- id: zod
+  repo_url: https://github.com/colinhacks/zod
+  commit_sha: afdac65e0f80c0ccf9e8909da97c411567908b57
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: packages/zod
+  setup_commands: []
+  verify_command: ["{venv_python}", "-c", "import pathlib; assert pathlib.Path('src/index.ts').is_file(); print('zod entry present')"]
+  supported_surfaces: [js_api]
+  known_requirements: "none — js_api is a static parse, nothing installs or executes"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      public_api: {enabled: false}
+      js_api:
+        enabled: true
+        probes:
+        - id: zod
+          file: src/index.ts
+
+- id: isort
+  repo_url: https://github.com/PyCQA/isort
+  commit_sha: a514c71ed86c2216d0040c7d60e302ed76a4f7ab
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  - - -c
+    - "import pathlib as _p; _d = _p.Path('bench_sample'); _d.mkdir(exist_ok=True); (_d / 'imports.py').write_text('\\\"\\\"\\\"Benchmark sample module.\\\"\\\"\\\"\\nimport os\\nimport sys\\n\\nfrom thirdparty import alpha, beta\\n', encoding='utf-8')"
+  verify_command: ["{venv_python}", "-m", "isort", "--version"]
+  supported_surfaces: [cli]
+  known_requirements: "bench_sample/ recreated by setup after each restore; sample is pre-sorted so isort writes nothing on a clean run"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      public_api: {enabled: false}
+      js_api: {enabled: false}
+      cli:
+        enabled: true
+        probes:
+        - id: fix
+          command: ["{venv_python}", "-m", "isort", "-q", "bench_sample/imports.py"]
+          trace:
+            fs_writes: true
+        - id: help
+          command: ["{venv_python}", "-m", "isort", "--help"]
+
+- id: dateutil
+  repo_url: https://github.com/dateutil/dateutil
+  commit_sha: 64914d9bcf987f0a6a8de77c3d07cc26f06185c9
+  license: Apache-2.0 OR BSD-3-Clause
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command: ["{venv_python}", "-c", "import dateutil.tz, dateutil.parser; print('ok')"]
+  supported_surfaces: [public_api]
+  known_requirements: "src/ layout; setuptools_scm version from git tags (runner clones are full)"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      js_api: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: dateutil
+          module: dateutil
+        - id: dateutil.tz
+          module: dateutil.tz

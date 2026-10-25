@@ -25,12 +25,15 @@ RESOLVE_SUFFIXES = ("", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".
 
 _DEFAULT_RE = re.compile(r"\bexport\s+default\b")
 _FN_RE = re.compile(
-    r"\bexport\s+(?:declare\s+)?(?:async\s+)?function\s*\*?\s*(\w+)\s*\(([^)]*)\)"
+    r"\bexport\s+(?:declare\s+)?(?:async\s+)?function\s*\*?\s*(\w+)"
+    r"(?:<[^<>()]*>)?\s*\(([^)]*)\)"
 )
 _CLASS_RE = re.compile(
     r"\bexport\s+(?:declare\s+)?(?:abstract\s+)?class\s+(\w+)"
 )
-_VAR_RE = re.compile(r"\bexport\s+(?:declare\s+)?(const|let|var)\s+(\w+)\s*=")
+# optional type annotation between name and "=" (": Foo<T = X>" stops at the
+# first "=" — the symbol is still recorded, its arrow signature may be None)
+_VAR_RE = re.compile(r"\bexport\s+(?:declare\s+)?(const|let|var)\s+(\w+)\s*(?::[^=]*)?=")
 _ARROW_CALL_RE = re.compile(r"\s*(?:async\s+)?\(([^()]*)\)\s*(?::[^=]*)?=>")
 _ARROW_IDENT_RE = re.compile(r"\s*(?:async\s+)?(\w+)\s*=>")
 _INTERFACE_RE = re.compile(r"\bexport\s+(?:declare\s+)?interface\s+(\w+)")
@@ -280,6 +283,8 @@ def parse_exports(text: str) -> dict:
         names = []
         for item in match.group(1).split(","):
             item = item.strip()
+            if item.startswith("type "):
+                item = item[5:].strip()  # `export { type X }` — erased modifier
             if not item:
                 continue
             local, _, exported = item.partition(" as ")
@@ -310,18 +315,30 @@ def parse_exports(text: str) -> dict:
 def resolve_specifier(spec: str, from_file: Path) -> Path | None:
     """Resolve a relative re-export specifier to a file the way TypeScript
     does: exact, then with known extensions, then as a directory index.
-    Non-relative specifiers (packages, aliases) resolve to None."""
+    TypeScript-style ``./x.js`` specifiers also try the ``.ts``/``.tsx``/
+    ``.mts``/``.cts`` sources (TS resolves ``.js`` to the compiled-from
+    source). Non-relative specifiers (packages, aliases) resolve to None."""
     if not spec.startswith("./") and not spec.startswith("../"):
         return None
     base = (from_file.parent / spec).resolve()
-    for suffix in RESOLVE_SUFFIXES:
-        candidate = Path(str(base) + suffix) if suffix else base
+    candidates = [base]
+    # "./x.js" -> "./x.ts" (TS source mapping), "./x.mjs" -> "./x.mts", etc.
+    for js_ext, ts_ext in ((".js", ".ts"), (".jsx", ".tsx"),
+                           (".mjs", ".mts"), (".cjs", ".cts")):
+        if str(base).endswith(js_ext):
+            candidates.append(Path(str(base)[:-len(js_ext)] + ts_ext))
+    for candidate in candidates:
         if candidate.is_file():
             return candidate
+        for suffix in RESOLVE_SUFFIXES:
+            extended = Path(str(candidate) + suffix) if suffix else candidate
+            if extended.is_file():
+                return extended
     for suffix in RESOLVE_SUFFIXES:
-        candidate = base / ("index" + suffix)
-        if candidate.is_file():
-            return candidate
+        for candidate in candidates:
+            index_file = candidate / ("index" + suffix)
+            if index_file.is_file():
+                return index_file
     return None
 
 

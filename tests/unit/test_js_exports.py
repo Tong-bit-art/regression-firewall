@@ -195,3 +195,38 @@ def test_cycle_guard_terminates(tmp_path):
     _write(tmp_path, "src/b.ts", "export * from './a'\nexport const b = 2\n")
     resolved = collect_public_symbols(tmp_path / "src" / "a.ts")
     assert set(resolved["symbols"]) == {"a", "b"}
+
+
+def test_ts_style_js_specifier_resolves_to_ts_source(tmp_path):
+    """TypeScript convention: `export * from './x.js'` resolves to ./x.ts
+    (found on a real repository barrel — zod)."""
+    _write(tmp_path, "src/index.ts", "export * from './v4/classic/external.js'\n")
+    _write(tmp_path, "src/v4/classic/external.ts", "export const z = 1\nexport const x = 2\n")
+    resolved = collect_public_symbols(tmp_path / "src" / "index.ts")
+    assert set(resolved["symbols"]) == {"z", "x"}
+    assert resolved["unresolved"] == []
+
+
+def test_generic_function_clause_and_type_annotated_const():
+    """Real-repo shapes (zod): generics between name and params; type
+    annotations before the "=" of a const export."""
+    parsed = parse_exports(
+        "export function coerce<T = unknown>(params?: string): Zod<T> {}\n"
+        "export const parse: <T extends Type>(data: unknown) => T = fn\n"
+        "export const plain = (a, b) => a\n"
+    )
+    assert parsed["symbols"]["coerce"]["signature"] == "(params?)"
+    # annotation stops the match at its own "=": symbol recorded, no signature
+    assert "parse" in parsed["symbols"]
+    assert parsed["symbols"]["parse"]["kind"] == "const"
+    assert parsed["symbols"]["plain"]["signature"] == "(a, b)"
+
+
+def test_named_list_type_modifier_stripped():
+    parsed = parse_exports(
+        "export {\n  globalRegistry,\n  type GlobalMeta,\n  registry,\n} from './config'\n"
+    )
+    spec = parsed["reexports"][0]
+    assert ("globalRegistry", "globalRegistry") in spec["names"]
+    assert ("GlobalMeta", "GlobalMeta") in spec["names"]
+    assert ("registry", "registry") in spec["names"]
