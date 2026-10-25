@@ -258,7 +258,7 @@ environment=pypi) — **owner scheduled this for 2026-10-26**.
 | Snapshot schema v2 + migration | DEFERRED | format is unchanged since v0.1; no driving need (speculative abstraction) |
 | Plugin API for custom surfaces | DEFERRED | no consumer evidence yet |
 | Multi-agent validation matrix | DEFERRED | requires external vendors |
-| Per-release metric publishing | OPTIONAL | attach eval-metrics JSON to GitHub Releases from release.yml |
+| Per-release metric publishing | DONE 2026-10-26 | release.yml runs pytest+evals as a release gate and attaches `summary.json` + a metrics table to every GitHub Release |
 
 ## Known Limitations (honest, documented in README/docs)
 

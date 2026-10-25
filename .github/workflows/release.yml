@@ -65,10 +65,36 @@ jobs:
           pip install dist/regression_firewall-*.whl
           regression-firewall --version
 
+      - name: Run eval suite (release gate)
+        run: |
+          pip install --quiet -e ".[dev]"
+          python -m pytest tests -q
+          python -m evals.runner
+
+      - name: Attach eval metrics to the release
+        run: |
+          python - <<'PY'
+          import json, pathlib
+
+          summary = json.loads(
+              pathlib.Path("evals/results/summary.json").read_text(encoding="utf-8")
+          )["summary"]
+          lines = ["", "## Detection metrics (this release)", "",
+                   "| Metric | Value |", "|---|---|"]
+          for key, value in summary.items():
+              if isinstance(value, float):
+                  value = f"{value:.1%}"
+              lines.append(f"| {key} | {value} |")
+          lines.append("")
+          with open("release_notes.md", "a", encoding="utf-8") as handle:
+              handle.write("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          PY
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          gh release create "$GITHUB_REF_NAME" dist/* evals/results/summary.json \
             --title "regression-firewall $VERSION" \
             --notes-file release_notes.md

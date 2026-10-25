@@ -1,6 +1,8 @@
 # Regression Firewall — Architecture
 
-Version: 0.1 (2026-10-04)
+Version: 0.4 (2026-10-26). Decisions D1–D5 (below) still hold; the
+V0.2–V0.6 additions extend the module map without changing the
+pipeline's shape.
 
 ## 1. Pipeline
 
@@ -33,11 +35,15 @@ them together. No stage reads or writes another stage's files directly.
 | Module | Responsibility | Key types |
 |---|---|---|
 | `models/` | Serializable data model for snapshots, changes, results | `Snapshot`, `ProbeCapture`, `Change`, `CheckResult` |
-| `config/` | Defaults, `.regression-firewall.yml` loading, validation | `Config` (+ per-surface dataclasses) |
-| `discovery/` | Language/framework detection, optional route discovery | `ProjectInfo` |
-| `capture/` | Run probes, produce raw `ProbeCapture`s; HTTP server lifecycle | `run_capture()` |
-| `normalize/` | Rule engine that masks volatile data before diffing | `Normalizer` |
-| `diff/` | Structural comparison of normalized captures → `Change` list | surface `diff_*` functions |
+| `config/` | Defaults, `.regression-firewall.yml` loading, validation; OpenAPI probe generation | `Config` (+ 4 surface dataclasses, `OpenApiConfig`, `TraceConfig`, `PerformanceConfig`) |
+| `discovery/` | Language/framework detection, route discovery, convention-based app detection (static) | `ProjectInfo`, `AppCandidate` |
+| `capture/` | Run probes, produce raw `ProbeCapture`s; HTTP server lifecycle; sitecustomize tracer (fs/env/sqlite); timing loop; static JS capture | `run_capture(only_probes=)` |
+| `normalize/` | Rule engine that masks volatile data before diffing (custom rules first) | `Normalizer` |
+| `diff/` | Structural comparison of normalized captures → `Change` list (http/cli/public_api/js_api) | surface `diff_*` functions |
+| `js_exports.py` | Static JS/TS export extraction + re-export resolution (depth 3) | `collect_public_symbols()` |
+| `sqlshape.py` | Deterministic SQL shape normalization + write-target extraction | `sql_shape()` |
+| `selection.py` | V0.5 selective capture: changed-file set → per-probe dependency decisions | `decide_probes()` |
+| `provenance.py` | git state, snapshot integrity hash, changed-files hint | `collect_changed_files()` |
 | `intent/` | Intent file model + deterministic expectation matcher | `Intent`, `classify_change()` |
 | `scoring/` | Severity tables, risk score, verdict | `score_changes()` |
 | `report/` | Console, Markdown, JSON renderers | `render_console()` etc. |
@@ -129,6 +135,28 @@ is a *successful* capture.
 4. Load intent (`--intent`, else `.regression-firewall/intent.json`); classify.
 5. Assign severity, compute risk score and verdict.
 6. Write `report.json` + `report.md`; render console; exit with verdict code.
+
+## 5b. V0.2–V0.6 additions (pipeline shape unchanged)
+
+- **OpenAPI import**: probes are derived at config-load time
+  (`config/openapi.py`) and become part of the config hash — a changed
+  document between baseline and check trips the standard warning.
+- **Behavior tracing** (`capture/cli.py`): an injected `sitecustomize.py`
+  records filesystem writes, env-var NAMES, and sqlite3 query shapes/counts
+  through a `factory` subclass; captured SQL is normalized by
+  `sqlshape.py` at capture time. Opt-in per probe; Python commands only.
+- **Selective capture** (`selection.py`): `check --select` maps the
+  changed-file set onto each probe's tracked paths and filters
+  `run_capture` per probe; every skip is recorded in
+  `CheckResult.selection`; unknown dependencies always run.
+- **Performance budgets** (`probe.performance`): warmup + timed repeats;
+  the sorted durations and their median are stored, and the diff applies a
+  median-ratio budget → `runtime_regressed` (UNCERTAIN, never auto-BLOCK).
+- **js_api surface** (`capture/js_api.py` + `diff/js_api.py`): fully
+  static — nothing executes; categories mirror public_api.
+- **GitHub Action** (`action.yml`): dual checkout, fresh baseline on the
+  base ref, verdict→conclusion mapping; dogfooded by
+  `.github/workflows/action-demo.yml`.
 
 ## 6. Cross-platform rules
 

@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Release workflow now runs the full pytest suite and the 24-case eval
+  suite as a release gate, appends a computed detection-metrics table to
+  the release notes, and attaches `summary.json` to the release.
+- `[project.urls]` metadata (Repository/Changelog/Issues/Release Notes).
+
 ## [0.4.0] - 2026-10-26
 
 Behavior visibility everywhere: sqlite query tracing, selective capture,

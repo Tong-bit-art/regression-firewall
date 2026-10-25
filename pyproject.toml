@@ -35,6 +35,12 @@ classifiers = [
 ]
 dependencies = ["PyYAML>=6.0"]
 
+[project.urls]
+Repository = "https://github.com/Tong-bit-art/regression-firewall"
+Changelog = "https://github.com/Tong-bit-art/regression-firewall/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Tong-bit-art/regression-firewall/issues"
+"Release Notes" = "https://github.com/Tong-bit-art/regression-firewall/releases"
+
 [project.optional-dependencies]
 # flask: fixture servers in tests/integration start real HTTP apps.
 dev = ["pytest>=7.0", "flask>=3.0"]

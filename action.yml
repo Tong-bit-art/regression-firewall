@@ -43,7 +43,7 @@ inputs:
   version:
     description: "regression-firewall version to install from PyPI (ignored when tool-install-command is set)."
     required: false
-    default: ">=0.3.0"
+    default: ">=0.4.0"
   install-command:
     description: "Project dependency install command, run inside project-path of BOTH checkouts (e.g. 'pip install -r requirements.txt')."
     required: false
