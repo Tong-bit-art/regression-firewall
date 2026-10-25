@@ -44,8 +44,13 @@ principles.
 
 ## V0.4 — Data behavior
 
-- Database surface: query count, write footprint, schema-sensitive reads.
-- Potential N+1 detection (count-per-request heuristic).
+- [x] Shipped 2026-10-25 (as `trace.sqlite` on CLI probes): normalized
+      query shapes + per-shape counts + write-table footprint for stdlib
+      sqlite3; a per-shape count change forces REVIEW (the count-per-run
+      N+1 signal for CLI jobs). Eval case 23.
+- Residual (needs a different mechanism, not scheduled): ORMs/network
+  databases (driver-level tracing), HTTP-request-scoped N+1 detection
+  (needs server-process instrumentation), schema-sensitive reads.
 
 ## V0.5 — Selective regression analysis
 

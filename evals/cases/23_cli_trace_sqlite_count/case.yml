@@ -1,0 +1,20 @@
+name: cli_trace_sqlite_count
+surface: cli
+description: "job.py starts running an existing query a different number of times (count-per-run signal, e.g. N+1); shape and table set stay the same."
+mutations:
+    - file: job.py
+      find: |-
+        for name in ("alice", "bob"):
+            conn.execute("INSERT INTO users(name) VALUES (?)", (name,))
+      replace: |-
+        for name in ("alice", "bob", "carol", "dave"):
+            conn.execute("INSERT INTO users(name) VALUES (?)", (name,))
+expect:
+  changes:
+    - surface: cli
+      target: job
+      category: db_query_count_changed
+      path: "INSERT INTO users(name) VALUES (?)"
+      classification: uncertain
+      severity: low
+  verdict: REVIEW

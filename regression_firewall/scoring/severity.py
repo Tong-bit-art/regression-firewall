@@ -40,6 +40,11 @@ DEFAULT_SEVERITY = {
     ("cli", "fs_write_removed"): "medium",
     ("cli", "env_read_added"): "low",
     ("cli", "env_read_removed"): "low",
+    ("cli", "db_query_added"): "medium",
+    ("cli", "db_query_removed"): "medium",
+    ("cli", "db_query_count_changed"): "low",
+    ("cli", "db_table_written_added"): "medium",
+    ("cli", "db_table_written_removed"): "medium",
 }
 
 # Categories whose *detection* is value-level rather than structural, so a
@@ -50,6 +55,7 @@ VALUE_LEVEL_CATEGORIES = {
     "stdout_changed",
     "stderr_changed",
     "header_changed",
+    "db_query_count_changed",
 }
 
 STATE_CATEGORIES = {"capture_error"}

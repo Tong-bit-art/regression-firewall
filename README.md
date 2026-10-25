@@ -56,7 +56,7 @@ not call the task complete.
 | Surface | Captures | Detects |
 |---|---|---|
 | **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE; probes can be derived from an OpenAPI 3.x document or generated from real routes via `discover --emit-probes` | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
-| **CLI** | stdout, stderr, exit code, watched files *and watched directories*; opt-in tracing of **filesystem writes** and **environment-variable reads** (names only; Python commands) | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory, new or vanished write targets, new or dropped env-var dependencies |
+| **CLI** | stdout, stderr, exit code, watched files *and watched directories*; opt-in tracing of **filesystem writes**, **environment-variable reads** (names only) and **sqlite3 query shapes + write tables** (Python commands) | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory, new or vanished write targets, new or dropped env-var dependencies, query-set and query-count changes (N+1 signal), new or dropped write tables |
 | **Public API (Python)** | importable symbols, signatures, `__all__`, submodules | removed symbols (CRITICAL), signature changes, export changes |
 | **JS/TS API** | static extraction of ESM/CJS exports from entry files, incl. one-hop re-export resolution (`export {x} from`, `export * from`) — nothing is executed | removed exports (CRITICAL), new exports, signature/kind changes |
 | **Volatile data** | — | masked by built-in normalizers plus *your own* custom rules (regex + key hints) |
@@ -256,6 +256,7 @@ surfaces:
         trace:                      # opt-in behavior tracing (Python commands)
           fs_writes: true           # record which paths the command writes
           env_reads: true           # record which env var NAMES it reads
+          sqlite: true              # record sqlite3 query shapes + write tables
 
   js_api:
     probes:
@@ -301,10 +302,10 @@ by configured probes. It cannot detect behavior that no probe covers.
 
 ### Bundled eval (synthetic)
 
-22 hand-built cases: status flips, removed fields, type changes, exit-code
+23 hand-built cases: status flips, removed fields, type changes, exit-code
 flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
-**22/22 passed.** See [docs/EVALS.md](docs/EVALS.md).
+**23/23 passed.** See [docs/EVALS.md](docs/EVALS.md).
 
 ### Validation corpus (real projects)
 
@@ -389,9 +390,11 @@ correctly. Findings and caveats:
   members, and `export =` syntax are not understood — a construct the
   parser cannot see is invisible, not guessed at.
 - **Behavior tracing is Python-only** (a `sitecustomize.py` is injected via
-  PYTHONPATH). It records write *paths* and env-var *names*, never file
-  contents or env values. `os.fdopen`-style fd writes and non-Python child
-  processes are invisible.
+  PYTHONPATH). It records write *paths*, env-var *names*, and — with
+  `trace.sqlite` — normalized query shapes/counts and write tables for
+  **stdlib sqlite3 only** (other drivers, ORMs, and network databases are
+  invisible). `os.fdopen`-style fd writes and non-Python child processes
+  are invisible.
 - **CLI watching is explicit.** Files and directories are watched because
   you listed them (`files` / `dirs`, with ignore globs and a per-dir
   `max_files` cap). Unknown files outside watched locations are not noticed.

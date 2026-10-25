@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Database behavior tracing (V0.4).** Per-probe opt-in `trace.sqlite`
+  records stdlib sqlite3 usage through the documented factory subclass
+  hook (C types cannot be monkeypatched; they are subclassable):
+  statements are normalized to SHAPES at capture time (literals -> `?`,
+  `IN`-lists collapsed, comments/whitespace removed) with per-shape
+  counts, plus a best-effort write-table footprint. New categories:
+  db_query_added / db_query_removed (MEDIUM), db_query_count_changed
+  (LOW, forces REVIEW — the count-per-run N+1 signal for CLI jobs),
+  db_table_written_added / db_table_written_removed (MEDIUM); all
+  UNCERTAIN. Honest scope: stdlib sqlite3 direct usage only — other
+  drivers, ORMs, and network databases are invisible (documented);
+  HTTP-request-scoped N+1 detection remains a roadmap item.
+- Eval case 23 (`cli_trace_sqlite_count`): N+1-style count signal.
+  Suite is now 23 cases.
+
 - **Official GitHub Action (CI integration mode — V1.0 item pulled
   forward).** Composite action (`action.yml`): checks out the PR base ref,
   captures a fresh behavior baseline, runs `check` on the head ref, maps

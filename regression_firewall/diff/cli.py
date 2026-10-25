@@ -125,6 +125,54 @@ def diff_cli(before: ProbeCapture, after: ProbeCapture, normalizer: Normalizer,
             config=config,
         ))
 
+    # -- database footprint (trace.sqlite; stdlib sqlite3) --------------------
+
+    # Shapes are normalized at capture time (literals -> placeholders), so a
+    # data change never looks like a query-set change. Counts ARE compared,
+    # but as a LOW/uncertain signal: legitimate loop bounds move them too.
+    db_before = bd.get("db_queries") or {}
+    db_after = ad.get("db_queries") or {}
+    for shape in sorted(set(db_before) - set(db_after)):
+        changes.append(make_change(
+            "cli", after.target, "db_query_removed", path=shape,
+            before={"count": db_before[shape]}, after=MISSING,
+            description=f"{after.target}: no longer runs {shape}",
+            config=config,
+        ))
+    for shape in sorted(set(db_after) - set(db_before)):
+        changes.append(make_change(
+            "cli", after.target, "db_query_added", path=shape,
+            before=MISSING, after={"count": db_after[shape]},
+            description=f"{after.target}: now also runs {shape}",
+            config=config,
+        ))
+    for shape in sorted(set(db_before) & set(db_after)):
+        if db_before[shape] != db_after[shape]:
+            changes.append(make_change(
+                "cli", after.target, "db_query_count_changed", path=shape,
+                before=db_before[shape], after=db_after[shape],
+                description=(f"{after.target}: runs {shape} "
+                             f"{db_before[shape]} -> {db_after[shape]} time(s)"),
+                config=config,
+            ))
+
+    tables_before = set(bd.get("db_tables_written") or [])
+    tables_after = set(ad.get("db_tables_written") or [])
+    for table in sorted(tables_before - tables_after):
+        changes.append(make_change(
+            "cli", after.target, "db_table_written_removed", path=table,
+            before=table, after=MISSING,
+            description=f"{after.target}: no longer writes table '{table}'",
+            config=config,
+        ))
+    for table in sorted(tables_after - tables_before):
+        changes.append(make_change(
+            "cli", after.target, "db_table_written_added", path=table,
+            before=MISSING, after=table,
+            description=f"{after.target}: now also writes table '{table}'",
+            config=config,
+        ))
+
     return changes
 
 

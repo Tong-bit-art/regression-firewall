@@ -91,6 +91,7 @@ class TraceConfig:
 
     fs_writes: bool = False
     env_reads: bool = False
+    sqlite: bool = False  # trace stdlib sqlite3 query shapes + write tables
 
 
 @dataclass
@@ -518,12 +519,13 @@ def _parse_trace(raw, probe_index: int, source: str) -> TraceConfig | None:
         raw = {"fs_writes": raw, "env_reads": raw}
     if not isinstance(raw, dict):
         raise ConfigError(f"{source}: {where} must be a mapping or a boolean")
-    _check_keys(raw, {"fs_writes", "env_reads"}, where, source)
+    _check_keys(raw, {"fs_writes", "env_reads", "sqlite"}, where, source)
     trace = TraceConfig(
         fs_writes=_as_bool(raw.get("fs_writes", False), f"{where}.fs_writes", source),
         env_reads=_as_bool(raw.get("env_reads", False), f"{where}.env_reads", source),
+        sqlite=_as_bool(raw.get("sqlite", False), f"{where}.sqlite", source),
     )
-    if not trace.fs_writes and not trace.env_reads:
+    if not (trace.fs_writes or trace.env_reads or trace.sqlite):
         return None
     return trace
 

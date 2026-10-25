@@ -12,6 +12,7 @@ from pathlib import Path
 
 from ..config.schema import CliSurfaceConfig
 from ..models.snapshot import ProbeCapture
+from ..sqlshape import sql_shape, write_targets
 
 # Injected via PYTHONPATH so every Python process in the probe tree records
 # its filesystem writes and (optionally) environment-variable READS (names
@@ -24,6 +25,7 @@ import atexit, builtins, json, os, threading
 _OUT = os.environ.get("REGFW_TRACE_OUT") or ""
 _TRACE_FS = os.environ.get("REGFW_TRACE_FS") == "1"
 _TRACE_ENV = os.environ.get("REGFW_TRACE_ENV") == "1"
+_TRACE_SQLITE = os.environ.get("REGFW_TRACE_SQLITE") == "1"
 
 if _OUT:
     _lock = threading.Lock()
@@ -106,6 +108,47 @@ if _OUT:
             return _orig_getitem(self, key)
 
         _Env.__getitem__ = _env_getitem
+
+    if _TRACE_SQLITE:
+        # sqlite3's Cursor/Connection are C extension types — their methods
+        # cannot be monkeypatched, but the documented `factory` hook allows
+        # subclassing. Only stdlib sqlite3.connect() calls made AFTER this
+        # injection are traced; other drivers/ORMs are invisible (documented).
+        import sqlite3 as _sq
+
+        _orig_connect = _sq.connect
+
+        class _TracedCursor(_sq.Cursor):
+            def execute(self, sql, *a, **k):
+                _record({"op": "sql", "sql": sql})
+                return super().execute(sql, *a, **k)
+
+            def executemany(self, sql, *a, **k):
+                _record({"op": "sql", "sql": sql})
+                return super().executemany(sql, *a, **k)
+
+        class _TracedConnection(_sq.Connection):
+            def cursor(self, *a, **k):
+                k.setdefault("factory", _TracedCursor)
+                return super().cursor(*a, **k)
+
+            def execute(self, sql, *a, **k):
+                _record({"op": "sql", "sql": sql})
+                return super().execute(sql, *a, **k)
+
+            def executemany(self, sql, *a, **k):
+                _record({"op": "sql", "sql": sql})
+                return super().executemany(sql, *a, **k)
+
+            def executescript(self, sql, *a, **k):
+                _record({"op": "sql", "sql": sql})
+                return super().executescript(sql, *a, **k)
+
+        def _connect(*a, **k):
+            k.setdefault("factory", _TracedConnection)
+            return _orig_connect(*a, **k)
+
+        _sq.connect = _connect
 '''
 
 _PYTHON_NAMES = ("python", "python3", "python.exe", "python3.exe")
@@ -131,7 +174,7 @@ def _run_probe(probe, project_root: Path) -> tuple:
     warnings = []
     trace_dir = None
     trace = getattr(probe, "trace", None)
-    if trace and (trace.fs_writes or trace.env_reads):
+    if trace and (trace.fs_writes or trace.env_reads or trace.sqlite):
         if Path(command[0] if command else "").name.lower() not in _PYTHON_NAMES:
             warnings.append(
                 f"probe {probe.id!r}: trace requested but the command does not "
@@ -149,6 +192,8 @@ def _run_probe(probe, project_root: Path) -> tuple:
                 env["REGFW_TRACE_FS"] = "1"
             if trace.env_reads:
                 env["REGFW_TRACE_ENV"] = "1"
+            if trace.sqlite:
+                env["REGFW_TRACE_SQLITE"] = "1"
 
     try:
         completed = subprocess.run(
@@ -174,9 +219,11 @@ def _run_probe(probe, project_root: Path) -> tuple:
         return ProbeCapture(probe_id=probe.id, target=probe.id, ok=False,
                             error=f"command is not executable: {command[0]}"), warnings
 
-    fs_writes, env_reads = [], []
+    fs_writes, env_reads, db_queries, db_tables = [], [], {}, []
     if trace_dir is not None:
-        fs_writes, env_reads = _read_trace(trace_dir / "trace.jsonl", project_root)
+        fs_writes, env_reads, db_queries, db_tables = _read_trace(
+            trace_dir / "trace.jsonl", project_root
+        )
         shutil.rmtree(trace_dir, ignore_errors=True)
 
     files = {}
@@ -201,11 +248,13 @@ def _run_probe(probe, project_root: Path) -> tuple:
         ),
         "files": files,
     }
-    if trace_dir is not None or (trace and (trace.fs_writes or trace.env_reads)):
+    if trace_dir is not None or (trace and (trace.fs_writes or trace.env_reads or trace.sqlite)):
         # always present when tracing is configured, so an empty trace is
         # meaningful (the command wrote/read nothing Python-visible)
         data["fs_writes"] = fs_writes
         data["env_reads"] = env_reads
+        data["db_queries"] = db_queries
+        data["db_tables_written"] = db_tables
 
     return ProbeCapture(
         probe_id=probe.id,
@@ -232,16 +281,18 @@ def _relativize_text(text: str, cwd: Path) -> str:
 
 
 def _read_trace(trace_path: Path, project_root: Path) -> tuple:
-    """Parse the JSONL trace into sorted, de-duplicated (fs_writes, env_reads).
-
-    Write paths under the project root are stored project-relative (portable
-    snapshots, stable diffs); anything outside keeps its absolute form, where
-    the normalizer's temp-path masking still applies at diff time."""
+    """Parse the JSONL trace into (fs_writes, env_reads, db_queries,
+    db_tables_written). Write paths under the project root are stored
+    project-relative (portable snapshots, stable diffs); anything outside
+    keeps its absolute form, where the normalizer's temp-path masking still
+    applies at diff time. SQL records become normalized shapes with counts
+    (data changes must never look like query-set changes)."""
     writes, envs = set(), set()
+    queries: dict = {}
     try:
         text = trace_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return [], []
+        return sorted(writes), sorted(envs), {}, []
     for line in text.splitlines():
         line = line.strip()
         if not line:
@@ -250,13 +301,21 @@ def _read_trace(trace_path: Path, project_root: Path) -> tuple:
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if record.get("op") == "env":
+        op = record.get("op")
+        if op == "env":
             name = record.get("name")
             if name:
                 envs.add(str(name))
+        elif op == "sql":
+            shape = sql_shape(str(record.get("sql") or ""))
+            if shape:
+                queries[shape] = queries.get(shape, 0) + 1
         elif record.get("path"):
             writes.add(_relativize(str(record["path"]), project_root))
-    return sorted(writes), sorted(envs)
+    tables = set()
+    for shape in queries:
+        tables |= write_targets(shape)
+    return sorted(writes), sorted(envs), dict(sorted(queries.items())), sorted(tables)
 
 
 def _relativize(path: str, project_root: Path) -> str:

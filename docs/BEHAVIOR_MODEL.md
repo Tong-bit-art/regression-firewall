@@ -177,6 +177,11 @@ Every detected difference is one structured `Change`:
 | `fs_write_removed` (trace) | MEDIUM | UNCERTAIN |
 | `env_read_added` (trace) | LOW | UNCERTAIN |
 | `env_read_removed` (trace) | LOW | UNCERTAIN |
+| `db_query_added` (trace.sqlite) | MEDIUM | UNCERTAIN |
+| `db_query_removed` (trace.sqlite) | MEDIUM | UNCERTAIN |
+| `db_query_count_changed` (trace.sqlite) | LOW | UNCERTAIN |
+| `db_table_written_added` (trace.sqlite) | MEDIUM | UNCERTAIN |
+| `db_table_written_removed` (trace.sqlite) | MEDIUM | UNCERTAIN |
 | `capture_error` | HIGH | UNEXPECTED |
 
 Tracing (`trace.fs_writes` / `trace.env_reads`) is opt-in per probe and
@@ -184,6 +189,20 @@ Python-only: a `sitecustomize.py` injected via PYTHONPATH records write
 paths and env-var NAMES (values never captured; `io.open` and `builtins.open`
 are both wrapped; `os.fdopen`-style fd writes are invisible). Write paths
 under the project root are stored project-relative.
+
+`trace.sqlite` records stdlib sqlite3 usage through the documented
+`factory` subclass hook (C types cannot be monkeypatched, but they are
+subclassable): `Connection.execute/executemany/executescript` and
+`Cursor.execute/executemany` are traced. Statements are normalized to
+SHAPES at capture time (string/numeric literals -> `?`, `IN`-lists
+collapsed, comments and whitespace removed) so a data change never looks
+like a query-set change; per-shape counts are recorded and their change is
+a LOW signal that forces a human review (the N+1 signal: an existing
+query now runs a different number of times). Write targets (INSERT /
+UPDATE / DELETE / REPLACE / CREATE / DROP / ALTER) are extracted
+best-effort. NOT traced (invisible, never guessed): other drivers, ORMs
+(SQLAlchemy etc.), network databases, `executemany` row multiplicity,
+connections created with a custom `factory`.
 ### Public API
 
 | Category | Default severity | Classification when unmatched |

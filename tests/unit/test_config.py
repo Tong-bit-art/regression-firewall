@@ -448,3 +448,14 @@ def test_trace_in_config_hash():
         {"id": "j", "command": ["python", "j.py"]},
     ]}}})
     assert config_hash(with_trace) != config_hash(without)
+
+
+def test_trace_sqlite_flag_parses():
+    probe_raw = {"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"], "trace": {"sqlite": True}},
+    ]}}}
+    cfg = parse_config(probe_raw)
+    assert cfg.cli.probes[0].trace.sqlite is True
+    assert cfg.cli.probes[0].trace.fs_writes is False
+    # sqlite-only trace survives the all-false -> None collapse
+    assert cfg.cli.probes[0].trace is not None

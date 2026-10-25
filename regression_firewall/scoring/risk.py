@@ -57,8 +57,11 @@ def score_changes(changes: list, thresholds) -> tuple:
     uncertain_present = bool(uncertain)
     # Content-level edits and medium+ uncertain changes always need a human
     # look; purely additive uncertain changes (new field, new symbol) do not
-    # force a REVIEW on their own.
-    UNCERTAIN_REVIEW_CATEGORIES = {"stdout_changed", "stderr_changed", "header_changed"}
+    # force a REVIEW on their own. Query-count changes force a review too:
+    # they are the N+1 signal (an existing query now runs a different number
+    # of times — the run itself changed, not just additive surface).
+    UNCERTAIN_REVIEW_CATEGORIES = {"stdout_changed", "stderr_changed", "header_changed",
+                                   "db_query_count_changed"}
     uncertain_needs_review = any(
         c.severity in ("medium", "high", "critical") or c.category in UNCERTAIN_REVIEW_CATEGORIES
         for c in uncertain

@@ -28,6 +28,17 @@ proves the old behavior still works.
 | **Fresh holdout V0.2** | **26/26 PASS** on tqdm/attrs/black (recall 100%, FPR 0%, verdict 100%) — `docs/FINAL_HOLDOUT_V02.md`; executed 2026-10-25, tool code 0.2.0 unchanged across all runs |
 | Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
 
+## V0.4 (shipped 2026-10-25, on main — unreleased)
+
+- **`trace.sqlite`** on CLI probes: stdlib sqlite3 query shapes + counts +
+  write-table footprint via the factory subclass hook (C types cannot be
+  monkeypatched — subclassing works). Shapes normalized at capture time
+  (`sqlshape.py`); count changes force REVIEW (the N+1 signal — added to
+  UNCERTAIN_REVIEW_CATEGORIES in `scoring/risk.py`). New categories:
+  db_query_added/removed, db_query_count_changed, db_table_written_added/
+  removed (all UNCERTAIN). Honest scope: stdlib sqlite3 direct usage only.
+- Suite at V0.4: 314 tests + 23/23 evals.
+
 ## V0.3 (shipped 2026-10-25, commit series on main)
 
 - **Convention-based HTTP discovery** — `discovery/appdetect.py` (static
@@ -43,7 +54,7 @@ proves the old behavior still works.
   only, never values; non-Python commands skip tracing with a warning.
 - Configuration-drift item deliberately closed by `files:` + tracing
   (documented in ROADMAP).
-- Suite at V0.3.0: 297 tests + 22/22 evals (verify with `python -m pytest tests -q`).
+- Suite at V0.3.0: 297 tests + 22/22 evals (released as v0.3.0).
 
 ## V0.2 (shipped 2026-10-25)
 

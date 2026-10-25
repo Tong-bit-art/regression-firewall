@@ -23,6 +23,11 @@ UNCERTAIN_CATEGORIES = {
     "fs_write_removed",
     "env_read_added",
     "env_read_removed",
+    "db_query_added",
+    "db_query_removed",
+    "db_query_count_changed",
+    "db_table_written_added",
+    "db_table_written_removed",
 }
 
 
