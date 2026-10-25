@@ -147,17 +147,20 @@ Any config change must be disclosed in your final response.
 
 ```bash
 regression-firewall init       # scaffold config (new projects)
-regression-firewall discover   # show detected surfaces and probes
+regression-firewall discover   # show detected surfaces and app candidates
+regression-firewall discover --emit-probes  # generate HTTP probes from real routes
 regression-firewall baseline   # capture before-behavior
 regression-firewall check      # capture after-behavior, diff, verdict
 regression-firewall report     # re-display the last report
 regression-firewall explain ID # detail for one change
 ```
 
-If the project has an OpenAPI document, prefer deriving HTTP probes from it
-(`surfaces.http.openapi` in the config; `regression-firewall import-openapi
-openapi.yaml` previews what would be generated) instead of hand-writing one
-probe per endpoint.
+For HTTP APIs, prefer generating probes over hand-writing them:
+`discover --emit-probes` finds FastAPI/Flask/Starlette apps by convention
+and prints ready-to-paste probes from the app's real routes (if the project
+ships an OpenAPI document, `surfaces.http.openapi` derives probes with real
+path values instead). Review the generated paths, add realistic bodies for
+POST/PUT, then baseline.
 
 Reports also list which files git saw change since the baseline — use that
 list to correlate behavior changes with your edits, but the verdict is

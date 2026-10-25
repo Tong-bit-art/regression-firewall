@@ -23,10 +23,12 @@ principles.
 
 ## V0.3 — Wider languages, environment behavior
 
+- [x] Better HTTP discovery (shipped 2026-10-25): FastAPI/Flask/Starlette
+      apps detected by convention (static scan, never imports project code
+      to detect); `discover --emit-probes` generates ready-to-paste probes
+      from an app's real routes; parameterized paths excluded with a note.
 - JavaScript / TypeScript public API surface (package exports, named
   exports, default export) via static parsing.
-- Better HTTP discovery: route extraction from FastAPI/Flask apps by
-  convention, not just explicit `discover.app` config.
 - Filesystem behavior surface (beyond watched files/dirs): read/write footprints.
 - Configuration drift detection (config files that code reads).
 - Environment variable read behavior for CLI probes.

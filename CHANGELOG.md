@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Convention-based HTTP app discovery (V0.3 first item).** `discover`
+  lists FastAPI/Flask/Starlette app instances found by a static scan
+  (imports nothing); `discover --emit-probes [MODULE:ATTR]` imports the app
+  in an isolated subprocess and prints ready-to-paste HTTP probes from its
+  **real routes** — spec defaults to the best-ranked candidate. Routes with
+  path parameters (`{id}` / `<int:id>`) are excluded with a note pointing at
+  the OpenAPI import for concrete values. Detection never executes project
+  code; only the explicitly chosen app is imported, exactly like a
+  configured `discover_app`.
 - **Fresh holdout on V0.2 code (2026-10-25).** New 3-repo corpus (tqdm,
   attrs, black — CLI, public-API src-layout, and the V0.2 directory-watch
   path), 26 cases: detection recall 100% (12/12), FPR 0% (14/14 controls),

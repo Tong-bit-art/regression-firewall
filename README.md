@@ -89,7 +89,11 @@ cd your-project
 # 1. Scaffold a config and detect what behavior exists
 regression-firewall init
 
-# 2. Declare what to watch: HTTP probes, CLI commands, public API modules
+# 2. Generate HTTP probes from your app's real routes (FastAPI/Flask/Starlette
+#    apps are found by convention), then paste them into .regression-firewall.yml
+regression-firewall discover --emit-probes
+
+# 3. Declare anything else to watch: CLI commands, public API modules
 #    (.regression-firewall.yml)
 ```
 
@@ -199,7 +203,8 @@ of the package — or fail.
 | Command | Purpose |
 |---|---|
 | `init` | Detect the project, scaffold `.regression-firewall.yml` |
-| `discover` | Show detected language/framework and configured surfaces |
+| `discover` | Show detected language/framework and configured surfaces; lists FastAPI/Flask/Starlette app candidates found by convention |
+| `discover --emit-probes [MODULE:ATTR]` | Generate ready-to-paste HTTP probes from an app's **real routes** (spec defaults to the best auto-detected app); parameterized paths are excluded with a note |
 | `baseline` | Capture current behavior into `.regression-firewall/baseline.json` |
 | `check` | Re-capture, diff against baseline, classify, score, write `report.json` + `report.md` |
 | `report` | Re-display the latest report (`--format console\|markdown\|json`) |
@@ -329,10 +334,11 @@ correctly. Findings and caveats:
 
 ## Limitations (honest list)
 
-- **HTTP probes must be configured.** `discover` can list routes for
-  FastAPI/Flask apps via `discover.app`, and OpenAPI documents can derive a
-  probe suite automatically — but the tool does not auto-invent probes from
-  arbitrary code.
+- **HTTP probes must be configured.** `discover --emit-probes` generates them
+  from a FastAPI/Flask/Starlette app's real routes (apps are found by
+  convention), and OpenAPI documents can derive a probe suite — but POST/PUT
+  bodies are not invented, and parameterized paths need concrete values
+  (list them yourself or use the OpenAPI import).
 - **Public API surface is Python only.** JS/TS exports are planned for V0.3.
 - **CLI watching is explicit.** Files and directories are watched because
   you listed them (`files` / `dirs`, with ignore globs and a per-dir
@@ -364,8 +370,9 @@ correctly. Findings and caveats:
 
 - **V0.2** *(shipped 2026-10)* — OpenAPI import, custom normalization rules,
   CLI directory watching, git-diff hints in reports
-- **V0.3** — JS/TS public API, filesystem & environment behavior, better
-  HTTP discovery
+- **V0.3** *(in progress)* — ~~better HTTP discovery~~ *(shipped 2026-10:
+  convention-based app detection + `discover --emit-probes`)*; JS/TS public
+  API, filesystem & environment behavior
 - **V0.4** — database behavior (query counts, N+1 signals)
 - **V0.5** — selective regression analysis (run only affected surfaces)
 - **V0.6** — opt-in performance regression

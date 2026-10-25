@@ -133,7 +133,12 @@ def main(argv=None) -> int:
     subparsers.add_parser("init", help="detect the project and scaffold configuration")\
         .add_argument("--force", action="store_true", help="overwrite an existing config file")
 
-    subparsers.add_parser("discover", help="report detected project type and behavior surfaces")
+    subparsers.add_parser("discover", help="report detected project type and behavior surfaces")\
+        .add_argument(
+            "--emit-probes", nargs="?", const="", default=None, metavar="MODULE:ATTR",
+            help="print ready-to-paste HTTP probes generated from the app's real "
+                 "routes (spec defaults to the best auto-detected app)",
+        )
 
     baseline = subparsers.add_parser("baseline", help="capture current behavior as the baseline")
     baseline.add_argument("--config", default=None, help="path to the config file")
@@ -243,6 +248,9 @@ def cmd_discover(args, root: Path) -> int:
     for warning in warnings:
         print(f"note: {warning}")
 
+    if getattr(args, "emit_probes", None) is not None:
+        return _emit_probes(args, root)
+
     from .discovery.project import detect_project
     from .discovery.routes import discover_routes
 
@@ -268,8 +276,10 @@ def cmd_discover(args, root: Path) -> int:
                 if len(routes) > 50:
                     print(f"    ... and {len(routes) - 50} more")
         else:
+            _print_app_candidates(root)
             print("  HTTP: set surfaces.http.discover_app (e.g. 'app.main:app') to list routes;")
             print("        probes define what is actually captured.")
+            print("  HTTP: 'discover --emit-probes' generates probes from an app's real routes.")
     if cfg.cli.enabled:
         print(f"  CLI: {len(cfg.cli.probes)} probe(s) configured")
         for probe in cfg.cli.probes:
@@ -278,6 +288,86 @@ def cmd_discover(args, root: Path) -> int:
         print(f"  Public API: {len(cfg.public_api.probes)} probe(s) configured")
         for probe in cfg.public_api.probes:
             print(f"    module {probe.module}")
+    return EXIT_OK
+
+
+def _print_app_candidates(root: Path) -> int:
+    from .discovery.appdetect import detect_app_candidates
+
+    candidates = detect_app_candidates(root)
+    if not candidates:
+        print("  HTTP: no FastAPI/Flask/Starlette app instance detected by convention;")
+        return EXIT_OK
+    print("  HTTP: detected app candidate(s) by convention (best first):")
+    for candidate in candidates[:5]:
+        print(f"    {candidate.spec:<30} ({candidate.framework}, {candidate.file}:{candidate.line})")
+    if len(candidates) > 5:
+        print(f"    ... and {len(candidates) - 5} more")
+    return EXIT_OK
+
+
+def _emit_probes(args, root: Path) -> int:
+    import yaml as _yaml
+
+    from .discovery.appdetect import (
+        detect_app_candidates,
+        probes_from_routes,
+        split_routes,
+    )
+    from .discovery.routes import discover_routes
+
+    spec = args.emit_probes.strip()
+    if not spec:
+        candidates = detect_app_candidates(root)
+        if not candidates:
+            print(
+                "error: no FastAPI/Flask/Starlette app instance detected; pass one "
+                "explicitly: discover --emit-probes module:attr",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
+        spec = candidates[0].spec
+        print(f"# auto-detected app: {spec} ({candidates[0].framework})", file=sys.stderr)
+    if spec.count(":") > 1 or not spec.partition(":")[0]:
+        print(f"error: invalid app spec {spec!r}; expected 'module:attr'", file=sys.stderr)
+        return EXIT_ERROR
+
+    routes, error = discover_routes(spec, root)
+    if error:
+        print(f"error: {error}", file=sys.stderr)
+        return EXIT_ERROR
+    concrete, parameterized = split_routes(routes)
+    probes = probes_from_routes(concrete)
+    if not probes:
+        print(
+            f"error: no probeable routes found in {spec}"
+            + (f" ({len(parameterized)} parameterized route(s) excluded)" if parameterized else ""),
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
+
+    print(_yaml.safe_dump(
+        {"probes": probes}, sort_keys=False, allow_unicode=True, default_flow_style=False,
+    ))
+    if parameterized:
+        paths = ", ".join(sorted({str(r.get("path")) for r in parameterized})[:10])
+        more = "" if len(parameterized) <= 10 else f" (and {len(parameterized) - 10} more)"
+        print(
+            f"# note: {len(parameterized)} parameterized route(s) excluded — they need "
+            f"concrete path values: {paths}{more}",
+            file=sys.stderr,
+        )
+        print(
+            "#       if the project ships an OpenAPI document, prefer "
+            "surfaces.http.openapi to derive probes with real values.",
+            file=sys.stderr,
+        )
+    print(
+        f"# {len(probes)} probe(s) generated from {spec}. Paste under "
+        "surfaces.http in .regression-firewall.yml, review paths/bodies, then run "
+        "'regression-firewall baseline'.",
+        file=sys.stderr,
+    )
     return EXIT_OK
 
 
