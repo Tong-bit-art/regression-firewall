@@ -44,6 +44,17 @@ def render_markdown(result: CheckResult) -> str:
                    "behavior; treat this result with reduced trust.")
         out.append("")
 
+    if result.selection:
+        out.append("## Selective Capture")
+        out.append("")
+        out.append("`check --select` skipped these probes (conservative dependency "
+                   "mapping; recorded here so skipping is never silent):")
+        out.append("")
+        for surface, ids in result.selection.items():
+            for probe_id, reason in ids.items():
+                out.append(f"- **{surface}/{probe_id}** — {reason}")
+        out.append("")
+
     if result.changed_files:
         out.append("## Changed Files (git hint)")
         out.append("")

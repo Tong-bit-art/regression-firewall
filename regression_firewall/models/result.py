@@ -27,6 +27,10 @@ class CheckResult:
     # (committed diffs + dirty working tree). Never affects the verdict.
     changed_files: list = field(default_factory=list)
     changed_files_truncated: bool = False
+    # Selective mode (check --select): probes deliberately NOT captured,
+    # {surface: {probe_id: reason}}. Recorded in every report — skipping is
+    # never silent.
+    selection: dict = field(default_factory=dict)
     created_at: str = ""
     tool_version: str = ""
     project: dict = field(default_factory=dict)
@@ -54,6 +58,7 @@ class CheckResult:
             "baseline_trust_warning": self.baseline_trust_warning,
             "changed_files": list(self.changed_files),
             "changed_files_truncated": self.changed_files_truncated,
+            "selection": {s: dict(ids) for s, ids in self.selection.items()},
             "warnings": list(self.warnings),
             "changes": [c.to_dict() for c in self.changes],
         }
@@ -74,6 +79,7 @@ class CheckResult:
             baseline_trust_warning=bool(d.get("baseline_trust_warning", False)),
             changed_files=list(d.get("changed_files") or []),
             changed_files_truncated=bool(d.get("changed_files_truncated", False)),
+            selection={s: dict(ids) for s, ids in (d.get("selection") or {}).items()},
             warnings=list(d.get("warnings", [])),
             created_at=d.get("created_at", ""),
             tool_version=d.get("tool_version", ""),

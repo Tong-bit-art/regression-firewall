@@ -49,6 +49,12 @@ def render_console(result: CheckResult) -> str:
         f"{summary.get('unexpected', 0)} unexpected, {summary.get('uncertain', 0)} uncertain"
     )
 
+    if result.selection:
+        out.append("Selective capture (check --select): probes NOT captured:")
+        for surface, ids in result.selection.items():
+            for probe_id, reason in ids.items():
+                out.append(f"  skipped {surface}/{probe_id}: {reason}")
+
     if result.changed_files:
         out.append(f"Changed files since baseline (git hint): {len(result.changed_files)}")
         for path in result.changed_files[:10]:

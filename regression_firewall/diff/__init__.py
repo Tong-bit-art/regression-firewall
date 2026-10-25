@@ -13,8 +13,12 @@ __all__ = ["diff_surfaces", "diff_json", "json_type", "make_change"]
 
 
 def diff_surfaces(baseline: Snapshot, latest: Snapshot, normalizer: Normalizer,
-                  config: Config) -> tuple:
-    """Diff all surfaces. Returns (changes, warnings)."""
+                  config: Config, skipped_probes=None) -> tuple:
+    """Diff all surfaces. Returns (changes, warnings). Probes in
+    ``skipped_probes`` ({surface: set(probe_id)}, selective mode) are compared
+    only when both sides have captures — their absence is deliberate, not a
+    warning."""
+    skipped = skipped_probes or {}
     from . import cli as cli_diff
     from . import http as http_diff
     from . import js_api as js_diff
@@ -27,6 +31,8 @@ def diff_surfaces(baseline: Snapshot, latest: Snapshot, normalizer: Normalizer,
         latest_map = latest.capture_map(surface)
         for probe_id in sorted(baseline_map):
             if probe_id not in latest_map:
+                if probe_id in skipped.get(surface, set()):
+                    continue
                 warnings.append(
                     f"probe {probe_id!r} exists in baseline but not in the latest capture; "
                     "the configuration changed between baseline and check"
@@ -44,6 +50,8 @@ def diff_surfaces(baseline: Snapshot, latest: Snapshot, normalizer: Normalizer,
                 changes.extend(api_diff.diff_public_api(before, after, config, make_change))
         for probe_id in sorted(latest_map):
             if probe_id not in baseline_map:
+                if probe_id in skipped.get(surface, set()):
+                    continue
                 warnings.append(
                     f"probe {probe_id!r} exists in the latest capture but not in the baseline; "
                     "the configuration changed between baseline and check"

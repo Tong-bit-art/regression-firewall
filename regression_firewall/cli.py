@@ -160,6 +160,13 @@ def main(argv=None) -> int:
     check.add_argument("--intent", default=None,
                        help="path to intent.json (default: .regression-firewall/intent.json)")
     check.add_argument(
+        "--select",
+        action="store_true",
+        help="capture only the surfaces whose mapped dependencies intersect the "
+             "changed-file set (conservative; unknown dependencies always run; "
+             "every skipped surface is recorded in the report)",
+    )
+    check.add_argument(
         "--accept-post-hoc-intent",
         action="store_true",
         help="acknowledge intent entries that were added or modified after a previous "
@@ -539,11 +546,43 @@ def cmd_check(args, root: Path) -> int:
         )
     warnings = warnings + baseline_warnings
 
-    latest, capture_warnings = run_capture(cfg, root, artifacts)
+    # Selective mode (--select): map the changed-file set onto each probe's
+    # tracked paths and capture only what can plausibly be affected. Skipping
+    # is conservative and always recorded in the report.
+    select_mode = bool(getattr(args, "select", False))
+    selected_only: dict = {}
+    selection: dict = {}
+    if select_mode:
+        from .selection import decide_probes
+
+        base_commit = ((baseline.provenance or {}).get("git") or {}).get("git_commit")
+        hint = collect_changed_files(root, base_commit, current_dirty=True)
+        if not hint["available"]:
+            warnings.append(
+                "selective mode: changed-file list unavailable (no git history "
+                "for the baseline); capturing every configured probe"
+            )
+        else:
+            decisions = decide_probes(cfg, root, hint["files"])
+            for decision in decisions:
+                if not decision.run:
+                    selection.setdefault(decision.surface, {})[decision.probe_id] = decision.reason
+                    warnings.append(
+                        f"selective mode: skipped {decision.surface}/{decision.probe_id} "
+                        f"— {decision.reason}"
+                    )
+                else:
+                    selected_only.setdefault(decision.surface, set()).add(decision.probe_id)
+
+    latest, capture_warnings = run_capture(
+        cfg, root, artifacts,
+        only_probes=selected_only if select_mode else None,
+    )
     _write_json(artifacts / "latest.json", latest.to_dict())
 
     normalizer = Normalizer(cfg.normalization, cfg.ignore)
-    changes, diff_warnings = diff_surfaces(baseline, latest, normalizer, cfg)
+    changes, diff_warnings = diff_surfaces(baseline, latest, normalizer, cfg,
+                                           skipped_probes=selection)
     warnings = warnings + capture_warnings + diff_warnings
 
     # A probe that failed at BOTH baseline and check produces no diff (both
@@ -628,6 +667,18 @@ def cmd_check(args, root: Path) -> int:
             score = cfg.thresholds.review_score
             floored = True
 
+    # A selective check that captured NOTHING verified nothing: no-evidence
+    # guard applies to deliberate skips as well.
+    if selection and not latest.surfaces and verdict == "PASS":
+        verdict = "REVIEW"
+        warnings.append(
+            "selective mode: every configured surface was skipped; nothing was "
+            "verified, so the verdict cannot be PASS"
+        )
+        if score < cfg.thresholds.review_score:
+            score = cfg.thresholds.review_score
+            floored = True
+
     result = CheckResult(
         verdict=verdict,
         score=score,
@@ -640,6 +691,7 @@ def cmd_check(args, root: Path) -> int:
         baseline_trust_warning=trust_warning,
         warnings=warnings,
         changed_files=_changed_files_hint(baseline, latest, root),
+        selection=selection,
         created_at=latest.created_at,
         tool_version=__version__,
         project=latest.project,
