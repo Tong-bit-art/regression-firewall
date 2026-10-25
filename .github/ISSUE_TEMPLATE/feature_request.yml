@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a new behavior surface, normalization rule, or workflow improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What behavior change or workflow gap does the tool not cover today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you configure or run, and what should the report show?
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Deterministic-first check
+      description: |
+        This tool never uses an LLM in its pipeline. Features must be
+        deterministic, explainable, and honest about what they cannot verify.
+      options:
+        - label: My proposal can be implemented deterministically (no LLM in the verdict path)
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

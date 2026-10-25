@@ -19,6 +19,7 @@ from .intent.model import IntentError, load_intent
 from .models.result import CheckResult
 from .models.snapshot import Snapshot
 from .normalize.engine import Normalizer
+from .provenance import collect_changed_files
 from .report.console import render_console
 from .report.json_report import report_to_dict
 from .report.markdown import render_markdown
@@ -50,6 +51,10 @@ surfaces:
     # If base_url contains {port}, the tool picks a free port and passes it
     # to the server via the REGFW_SERVER_PORT environment variable.
     base_url: "http://127.0.0.1:8000"
+    # Derive probes from an OpenAPI 3.x document instead of listing them:
+    #   openapi:
+    #     file: openapi.yaml        # {path} params: map values via `set:`
+    #     set: {id: "1"}
     probes: []
       # - id: "POST /login"
       #   method: POST
@@ -62,6 +67,10 @@ surfaces:
       # - id: deploy
       #   command: ["python", "deploy.py"]
       #   files: ["out/receipt.json"]   # generated files to watch
+      #   dirs:                         # watch whole directories
+      #     - path: out/
+      #       ignore: ["*.tmp", "__pycache__"]
+      #       max_files: 2000
 
   public_api:
     enabled: true
@@ -84,6 +93,12 @@ normalization:
   float_precision: true
   whitespace: true
   ansi: true
+  # Project-specific noise the built-in rules miss:
+  # custom_rules:
+  #   - name: order_ref
+  #     pattern: '^[A-Z]{3}-[0-9]{6}$'
+  #     key_hints: [ref, order]     # optional: only fire under matching keys
+  #     placeholder: '<ORDER_REF>'
 
 thresholds:
   review_score: 30
@@ -147,6 +162,27 @@ def main(argv=None) -> int:
     explain = subparsers.add_parser("explain", help="print full detail for one change id")
     explain.add_argument("change_id", help="change id (or unambiguous prefix) from the report")
 
+    import_openapi = subparsers.add_parser(
+        "import-openapi",
+        help="preview the HTTP probes generated from an OpenAPI 3.x document",
+        description=(
+            "Print the surfaces.http.probes YAML that an OpenAPI 3.x document "
+            "generates. Prefer configuring surfaces.http.openapi in "
+            ".regression-firewall.yml — probes are then derived at load time, "
+            "and this command is only needed to preview them."
+        ),
+    )
+    import_openapi.add_argument("file", help="path to the OpenAPI document (.yaml/.yml/.json)")
+    import_openapi.add_argument(
+        "--set", action="append", default=[], metavar="NAME=VALUE",
+        help="concrete value for a {path} parameter (repeatable); "
+             "unmapped parameters default to '1'",
+    )
+    import_openapi.add_argument(
+        "--methods", default="",
+        help="comma-separated subset of GET,POST,PUT,PATCH,DELETE (default: all found)",
+    )
+
     args = parser.parse_args(argv)
     root = Path(args.project).resolve()
 
@@ -157,6 +193,7 @@ def main(argv=None) -> int:
         "check": cmd_check,
         "report": cmd_report,
         "explain": cmd_explain,
+        "import-openapi": cmd_import_openapi,
     }
     try:
         return handlers[args.command](args, root)
@@ -502,6 +539,7 @@ def cmd_check(args, root: Path) -> int:
         config_changed_since_baseline=config_changed,
         baseline_trust_warning=trust_warning,
         warnings=warnings,
+        changed_files=_changed_files_hint(baseline, latest, root),
         created_at=latest.created_at,
         tool_version=__version__,
         project=latest.project,
@@ -574,6 +612,59 @@ def cmd_explain(args, root: Path) -> int:
     return EXIT_OK
 
 
+def cmd_import_openapi(args, root: Path) -> int:
+    import yaml as _yaml
+
+    from .config.openapi import load_openapi_document, probes_from_openapi
+    from .config.schema import PROBE_METHODS
+
+    doc_path = Path(args.file)
+    if not doc_path.is_absolute():
+        doc_path = root / doc_path
+    doc = load_openapi_document(doc_path, source=str(doc_path))
+
+    set_values = {}
+    for item in args.set:
+        if "=" not in item:
+            print(f"error: --set expects NAME=VALUE, got {item!r}", file=sys.stderr)
+            return EXIT_ERROR
+        name, value = item.split("=", 1)
+        set_values[name] = value
+    methods = None
+    if args.methods:
+        methods = [m.strip().upper() for m in args.methods.split(",") if m.strip()]
+        bad = [m for m in methods if m not in PROBE_METHODS]
+        if bad:
+            print(
+                f"error: unsupported method(s): {', '.join(bad)}; "
+                f"supported: {', '.join(PROBE_METHODS)}",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
+
+    probes, warnings = probes_from_openapi(doc, set_values=set_values, methods=methods,
+                                           source=str(doc_path))
+    out = []
+    for probe in probes:
+        entry = {"id": probe.id, "method": probe.method, "path": probe.path}
+        if probe.body is not None:
+            entry["body"] = probe.body
+        out.append(entry)
+    print(_yaml.safe_dump(out, sort_keys=False, allow_unicode=True))
+    for warning in warnings:
+        print(f"note: {warning}", file=sys.stderr)
+    print(
+        f"# {len(probes)} probe(s). Add surfaces.http.openapi to "
+        ".regression-firewall.yml to derive them at load time:",
+        file=sys.stderr,
+    )
+    print(f"#   surfaces:", file=sys.stderr)
+    print(f"#     http:", file=sys.stderr)
+    print(f"#       openapi:", file=sys.stderr)
+    print(f"#         file: {args.file}", file=sys.stderr)
+    return EXIT_OK
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 
@@ -589,6 +680,17 @@ def _wildcard_intent_warnings(intent) -> list:
                 "it marks all changes EXPECTED — narrow it to what the user actually asked for"
             )
     return warnings
+
+
+def _changed_files_hint(baseline: Snapshot, latest: Snapshot, root: Path) -> list:
+    """Files changed since the baseline commit — a report-only correlation
+    hint. Never feeds classification, scoring, or the verdict."""
+    base_commit = ((baseline.provenance or {}).get("git") or {}).get("git_commit")
+    latest_git = (latest.provenance or {}).get("git") or {}
+    info = collect_changed_files(
+        root, base_commit, current_dirty=bool(latest_git.get("git_dirty"))
+    )
+    return info["files"] if info["available"] else []
 
 
 def _unverified_probes(baseline: Snapshot, latest: Snapshot) -> list:

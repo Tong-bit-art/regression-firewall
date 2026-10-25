@@ -20,6 +20,49 @@ class Normalizer:
     def __init__(self, normalization: NormalizationConfig, ignore: IgnoreConfig):
         self.cfg = normalization
         self.ignore = ignore
+        # Custom rules are compiled once; config order is preserved so the
+        # same config always produces the same masking.
+        self.custom_rules = []
+        for rule in getattr(normalization, "custom_rules", None) or []:
+            import re
+
+            self.custom_rules.append(
+                (
+                    re.compile(rule.pattern),
+                    tuple(h.lower() for h in rule.key_hints or []),
+                    rule.resolved_placeholder(),
+                )
+            )
+
+    def _apply_custom_rules(self, value: str, key) -> Optional[str]:
+        """Keyed-value application: full-match against the whole string.
+
+        Returns the placeholder when a rule matches, else None. Rules with
+        key_hints only apply when the key matches one of them (case-insensitive
+        substring); rules without key_hints apply to any keyed value.
+        """
+        for pattern, hints, placeholder in self.custom_rules:
+            if hints:
+                if not key:
+                    continue
+                low = str(key).lower()
+                if not any(h in low for h in hints):
+                    continue
+            if pattern.fullmatch(value):
+                return placeholder
+        return None
+
+    def _apply_custom_text_rules(self, text: str) -> str:
+        """Plain-text application (stdout/stderr): global re.sub.
+
+        Only rules WITHOUT key_hints participate — there is no key context in
+        free text, so a key-scoped rule could not be applied honestly.
+        """
+        for pattern, hints, placeholder in self.custom_rules:
+            if hints:
+                continue
+            text = pattern.sub(placeholder, text)
+        return text
 
     # -- JSON values --------------------------------------------------------
 
@@ -60,6 +103,10 @@ class Normalizer:
     def normalize_string(self, value: str, key: Optional[str] = None) -> str:
         if not value:
             return value
+        if self.custom_rules:
+            custom = self._apply_custom_rules(value, key)
+            if custom is not None:
+                return custom
         if self.cfg.uuid and R.UUID_RE.match(value):
             return "<UUID>"
         if self.cfg.iso_datetime and R.ISO_RE.match(value):
@@ -116,6 +163,10 @@ class Normalizer:
             text = R.strip_ansi(text)
         if self.cfg.whitespace:
             text = R.normalize_lines(text)
+        if self.custom_rules:
+            # Custom rules run first so user patterns see the original text
+            # and their placeholders win over built-in inline rules.
+            text = self._apply_custom_text_rules(text)
         if self.cfg.uuid:
             text = R.UUID_INLINE_RE.sub("<UUID>", text)
         if self.cfg.iso_datetime:

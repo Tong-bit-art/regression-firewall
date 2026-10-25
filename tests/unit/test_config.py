@@ -229,3 +229,151 @@ def test_invalid_yaml(tmp_path):
 def test_parse_config_rejects_non_mapping():
     with pytest.raises(ConfigError, match="mapping"):
         parse_config([1, 2])
+
+
+# -- custom normalization rules -------------------------------------------------
+
+
+def test_custom_rule_parses():
+    raw = {
+        "normalization": {
+            "custom_rules": [
+                {
+                    "name": "order_ref",
+                    "pattern": r"^[A-Z]{3}-\d{6}$",
+                    "key_hints": ["ref", "order"],
+                    "placeholder": "<ORDER_REF>",
+                }
+            ]
+        }
+    }
+    cfg = parse_config(raw)
+    rules = cfg.normalization.custom_rules
+    assert len(rules) == 1
+    assert rules[0].name == "order_ref"
+    assert rules[0].pattern == r"^[A-Z]{3}-\d{6}$"
+    assert rules[0].key_hints == ["ref", "order"]
+    assert rules[0].placeholder == "<ORDER_REF>"
+
+
+def test_custom_rule_defaults():
+    cfg = parse_config({"normalization": {"custom_rules": [
+        {"name": "span_id", "pattern": "[0-9a-f]{16}"},
+    ]}})
+    rule = cfg.normalization.custom_rules[0]
+    assert rule.key_hints == []
+    assert rule.placeholder is None
+    assert rule.resolved_placeholder() == "<SPAN_ID>"
+
+
+def test_custom_rule_in_config_hash():
+    from regression_firewall.config.loader import config_hash
+
+    with_rules = parse_config({"normalization": {"custom_rules": [
+        {"name": "a", "pattern": "x"},
+    ]}})
+    without = parse_config({})
+    assert config_hash(with_rules) != config_hash(without)
+    # same config → same hash (custom_rules preserve order)
+    assert config_hash(with_rules) == config_hash(parse_config({
+        "normalization": {"custom_rules": [{"name": "a", "pattern": "x"}]}
+    }))
+
+
+def test_custom_rule_reject_bad_name():
+    with pytest.raises(ConfigError, match=r"custom_rules\[0\].name"):
+        parse_config({"normalization": {"custom_rules": [{"name": "Bad Name", "pattern": "x"}]}})
+
+
+def test_custom_rule_reject_duplicate_name():
+    with pytest.raises(ConfigError, match="duplicate rule name"):
+        parse_config({"normalization": {"custom_rules": [
+            {"name": "a", "pattern": "x"},
+            {"name": "a", "pattern": "y"},
+        ]}})
+
+
+def test_custom_rule_reject_bad_pattern():
+    with pytest.raises(ConfigError, match="does not compile"):
+        parse_config({"normalization": {"custom_rules": [
+            {"name": "a", "pattern": "("},
+        ]}})
+
+
+def test_custom_rule_reject_bad_placeholder():
+    with pytest.raises(ConfigError, match="placeholder"):
+        parse_config({"normalization": {"custom_rules": [
+            {"name": "a", "pattern": "x", "placeholder": "TOKEN"},
+        ]}})
+
+
+def test_custom_rule_reject_empty_pattern():
+    with pytest.raises(ConfigError, match="pattern"):
+        parse_config({"normalization": {"custom_rules": [{"name": "a", "pattern": ""}]}})
+
+
+def test_custom_rule_reject_bad_key_hints():
+    with pytest.raises(ConfigError, match="key_hints"):
+        parse_config({"normalization": {"custom_rules": [
+            {"name": "a", "pattern": "x", "key_hints": ["ok", ""]},
+        ]}})
+
+
+def test_custom_rule_reject_non_list():
+    with pytest.raises(ConfigError, match="must be a list"):
+        parse_config({"normalization": {"custom_rules": {"name": "a"}}})
+
+
+def test_custom_rule_reject_unknown_keys():
+    with pytest.raises(ConfigError, match="unknown keys"):
+        parse_config({"normalization": {"custom_rules": [
+            {"name": "a", "pattern": "x", "regex": "y"},
+        ]}})
+
+
+# -- CLI directory watches -------------------------------------------------------
+
+
+def _cli_probe_raw(dirs):
+    return {"surfaces": {"cli": {"probes": [
+        {"id": "gen", "command": ["python", "build.py"], "dirs": dirs},
+    ]}}}
+
+
+def test_cli_dirs_string_and_mapping_forms():
+    cfg = parse_config(_cli_probe_raw([
+        "out",
+        {"path": "dist", "ignore": ["*.map"], "max_files": 100},
+    ]))
+    dirs = cfg.cli.probes[0].dirs
+    assert dirs[0].path == "out"
+    assert dirs[0].ignore == []
+    assert dirs[0].max_files == 2000
+    assert dirs[1].path == "dist"
+    assert dirs[1].ignore == ["*.map"]
+    assert dirs[1].max_files == 100
+
+
+def test_cli_dirs_reject_non_list():
+    with pytest.raises(ConfigError, match="dirs"):
+        parse_config(_cli_probe_raw({"path": "out"}))
+
+
+def test_cli_dirs_reject_missing_path():
+    with pytest.raises(ConfigError, match="path is required"):
+        parse_config(_cli_probe_raw([{"ignore": ["a"]}]))
+
+
+def test_cli_dirs_reject_bad_max_files():
+    with pytest.raises(ConfigError, match="max_files"):
+        parse_config(_cli_probe_raw([{"path": "out", "max_files": 0}]))
+
+
+def test_cli_dirs_reject_bad_ignore():
+    with pytest.raises(ConfigError, match="ignore"):
+        parse_config(_cli_probe_raw([{"path": "out", "ignore": [1]}]))
+
+
+def test_cli_dirs_reject_unknown_keys():
+    with pytest.raises(ConfigError, match="unknown keys"):
+        parse_config(_cli_probe_raw([{"path": "out", "deep": True}]))

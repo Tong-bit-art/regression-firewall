@@ -1,0 +1,22 @@
+name: cli_dir_watch_created
+surface: cli
+description: "deploy.py writes a new generated file inside a watched directory; an ignored scratch file must stay invisible."
+mutations:
+    - file: deploy.py
+      find: |-
+        print("Build complete")
+            return 0
+      replace: |-
+        with open(os.path.join("out", "extra.txt"), "w") as f:
+                f.write("extra artifact")
+            print("Build complete")
+            return 0
+expect:
+  changes:
+    - surface: cli
+      target: "build"
+      category: file_created
+      path: "out/extra.txt"
+      classification: uncertain
+      severity: medium
+  verdict: REVIEW

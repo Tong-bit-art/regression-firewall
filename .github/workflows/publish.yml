@@ -1,0 +1,43 @@
+name: Publish to PyPI
+
+# Manual PyPI publication via Trusted Publishers (OIDC, no token stored).
+# Prerequisites — see docs/RELEASE.md:
+#   1. On pypi.org, add a Trusted Publisher for this repository:
+#      owner=Tong-bit-art, repository=regression-firewall,
+#      workflow=publish.yml, environment=pypi
+#   2. In repo Settings → Environments, create `pypi`.
+# Publishing must always follow a tagged GitHub Release (release.yml).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag exists for current version
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          git fetch --tags --force
+          if ! git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::pyproject version $VERSION has no matching git tag; tag it and run release.yml first"
+            exit 1
+          fi
+
+      - name: Build sdist and wheel
+        run: |
+          pip install build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

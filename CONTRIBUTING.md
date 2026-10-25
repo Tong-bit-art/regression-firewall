@@ -47,6 +47,11 @@ python -m evals.runner            # eval suite standalone with metrics table
 | normalization | `docs/NORMALIZATION.md` + unit tests |
 | scoring/verdicts | `docs/RISK_MODEL.md` + unit tests |
 | CLI/config | `README.md` + config validation tests |
+| release-affecting change | `CHANGELOG.md` under `[Unreleased]` |
+
+Releases are tag-driven and fully automated — maintainers, see
+[docs/RELEASE.md](docs/RELEASE.md). PR titles become changelog material, so
+keep them specific.
 
 ## Tests
 

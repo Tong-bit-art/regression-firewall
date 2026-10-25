@@ -132,9 +132,13 @@ Read `report.md` / `report.json` for details. For any change, use
 ## Configuration changes that ARE legitimate
 
 - Adding probes for a new endpoint/command the user asked to build (then a
-  fresh baseline is expected — say so).
-- Extending `ignore.json_paths` for genuinely per-run-volatile data the
-  default normalizer misses, with an example of the noise.
+  fresh baseline is expected — say so). For HTTP APIs, configuring
+  `surfaces.http.openapi` to derive probes from the project's OpenAPI
+  document counts as this.
+- Extending `ignore.json_paths` or adding a **scoped** `normalization.custom_rules`
+  entry for genuinely per-run-volatile data the default normalizer misses,
+  with an example of the noise. Never add a broad custom rule just to make a
+  diff disappear.
 - Severity overrides the user explicitly requests.
 
 Any config change must be disclosed in your final response.
@@ -149,3 +153,12 @@ regression-firewall check      # capture after-behavior, diff, verdict
 regression-firewall report     # re-display the last report
 regression-firewall explain ID # detail for one change
 ```
+
+If the project has an OpenAPI document, prefer deriving HTTP probes from it
+(`surfaces.http.openapi` in the config; `regression-firewall import-openapi
+openapi.yaml` previews what would be generated) instead of hand-writing one
+probe per endpoint.
+
+Reports also list which files git saw change since the baseline — use that
+list to correlate behavior changes with your edits, but the verdict is
+computed from behavior, never from the file list.

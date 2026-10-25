@@ -1,0 +1,76 @@
+name: Bug report
+description: A detection result is wrong (false positive / false negative), or the tool crashes.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Detection bugs (wrong verdict, missed
+        regression, noisy false positive) are the most valuable kind — please
+        include the report files if you can (snapshots are redacted and safe
+        to share; see SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did Regression Firewall report instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Bug kind
+      options:
+        - False positive (reported a regression where behavior was unchanged/intended)
+        - False negative (a real behavior change was not detected)
+        - Wrong severity / verdict
+        - Crash or tool error
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Behavior surface
+      options:
+        - HTTP
+        - CLI
+        - Public API (Python)
+        - Normalization (noise not masked)
+        - Reports / CLI UX
+        - Multiple / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Config file, probe definitions, and the code before/after. A
+        self-contained snippet is ideal; a link to a repo works too.
+      placeholder: |
+        .regression-firewall.yml: ...
+        before: ...
+        after: ...
+        observed verdict: ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: regression-firewall version
+      description: Output of `regression-firewall --version`
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and Python version
+      placeholder: "Windows 11, Python 3.12"
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Attachments
+      description: report.md / report.json (secrets are already masked at capture time)

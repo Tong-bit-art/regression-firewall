@@ -1,8 +1,6 @@
 # Regression Firewall — Agent Handoff Document
 
-**Handoff date:** 2026-10-07
-**Frozen implementation commit:** `d3c1e49` (CI green)
-**Latest docs commits:** validation execution + evidence (see `git log`)
+**Handoff date:** 2026-10-25 (V0.2 development session; previous: 2026-10-07)
 **Repo:** https://github.com/Tong-bit-art/regression-firewall (public)
 **Working directory:** `D:\Regression Firewall Skill`
 **Python:** 3.11.9 (system), 3.14.3 (uv-managed, use `py -V:Astral/CPython3.14.3 -m venv`)
@@ -19,26 +17,39 @@ PASS/REVIEW/BLOCK verdict.
 **Core principle:** Your tests prove the new code works. Regression Firewall
 proves the old behavior still works.
 
-## Current State (all verified, CI green)
+## Current State (verified 2026-10-25, local Windows run)
 
 | Suite | Result |
 |---|---|
-| pytest | **152 passed / 0 failed** |
-| Bundled evals | **20/20** (recall 100%, FPR 0%, verdict 100%) |
-| CI matrix | **7/7 green** (Ubuntu 3.11-3.13, Windows/macOS 3.12-3.13) |
-| Clean install | wheel + sdist verified in fresh venvs |
-| Real-world benchmark | 8 repos, 66 cases, 4 core bugs found & fixed |
-| Dogfooding | 5 tasks on flaskr (self-dogfooding, caveat documented) |
-| Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07) |
+| pytest | **236 passed / 0 failed** |
+| Bundled evals | **21/21** (recall 100%, FPR 0%, verdict 100%) |
+| Real-world benchmark | 8 repos, 66 cases, 4 core bugs found & fixed (V0.1 code) |
+| Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
+
+## V0.2 (shipped 2026-10-25)
+
+- **OpenAPI import** — `surfaces.http.openapi` derives HTTP probes from an
+  OpenAPI 3.x document at load time; `import-openapi` previews them.
+  Implementation: `regression_firewall/config/openapi.py` (loaded by
+  `config/loader.py`, schema in `config/schema.py`).
+- **Custom normalization rules** — `normalization.custom_rules` (regex +
+  optional key hints + placeholder). Compiled in `normalize/engine.py`.
+- **CLI directory watching** — `surfaces.cli.probes[].dirs` (path, ignore
+  globs, max_files cap with warning). Implementation: `capture/cli.py`.
+- **Git diff hints** — reports list files changed since the baseline commit
+  (`provenance.collect_changed_files`, report-only, never affects verdicts).
+- Repo infrastructure: README badges, issue/PR templates, tag-driven
+  `release.yml`, manual `publish.yml` (PyPI trusted publisher),
+  `docs/RELEASE.md`, CI actions bumped to checkout@v5/setup-python@v6.
 
 ## Verdict Status
 
 | Gate | Status |
 |---|---|
 | ENGINEERING READY | **YES** |
-| BEHAVIOR DETECTION VALIDATED | **YES (with caveats)** |
-| INDEPENDENT AGENT VALIDATED | **YES (with caveats)** — executed 2026-10-07: DeepSeek V4 Pro in OpenCode, fresh context; 10/10 protocol tasks, 0 hard-rule violations, 3/3 pressure scenarios held; findings in `docs/INDEPENDENT_AGENT_VALIDATION.md` |
-| PUBLIC RELEASE READY | **YES (BETA)** |
+| BEHAVIOR DETECTION VALIDATED | **YES for V0.1 surfaces (with caveats); V0.2 additions covered by unit/integration tests + eval case 21, NOT yet by a real-repo benchmark run** |
+| INDEPENDENT AGENT VALIDATED | **YES (V0.1 code)** — DeepSeek V4 Pro in OpenCode, fresh context; 10/10 protocol tasks, 0 hard-rule violations; findings in `docs/INDEPENDENT_AGENT_VALIDATION.md` |
+| PUBLIC RELEASE READY | **YES (BETA)** — v0.2.0 tagged and released via the automated workflow |
 
 ## Architecture (key modules)
 
@@ -53,7 +64,8 @@ regression_firewall/
 │   └── _api_runner.py     # subprocess script: canonical signature fingerprint
 ├── config/
 │   ├── schema.py          # typed dataclasses + validation (ConfigError)
-│   └── loader.py          # YAML/JSON loading, find_config_file
+│   ├── loader.py          # YAML/JSON loading, find_config_file
+│   └── openapi.py         # OpenAPI 3.x → HTTP probe generation (V0.2)
 ├── diff/
 │   ├── engine.py          # structural JSON diff (json_type, diff_json)
 │   ├── http.py            # HTTP surface diff
@@ -160,15 +172,11 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 
 | Item | Priority | Status |
 |---|---|---|
-| Independent agent validation | — | **DONE 2026-10-07** (10/10 tasks, 0 violations) |
-| Intent auditability (post-check intent additions) | — | **DONE** (release-blocker closure): intent audit trail + post-hoc guard (`--accept-post-hoc-intent`) + append-only journal |
-| Public-API intent target discoverability | — | **DONE**: SKILL.md documents the `module.symbol` target form |
-| API-probing deployment docs | — | **DONE**: README documents that the tool must run where the target package is importable |
-| src/-layout public API coverage | — | **DONE**: `src/` import root + fixture `tests/fixtures/src_layout_package/` + post-fix validation (urllib3/packaging 7/7) |
-| Fresh holdout completion | HIGH (before next release) | Post-fix validation 7/7×3, but the holdout is **consumed**: select a NEW fresh holdout before the next release cycle |
-| PyPI publication | MEDIUM | README says source-only install; PyPI planned |
-| CI maintenance | LOW | Node 20 deprecation warnings for `actions/checkout@v4` / `actions/setup-python@v5`; `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19. Not release blockers |
+| New fresh holdout | HIGH (before the release AFTER v0.2.0, or a v0.2.x detection change) | The 2026-10-07 holdout corpus is consumed. V0.2 touched capture (cli dirs) and normalization (custom rules) — both are additive and covered by tests + eval case 21, but a real-repo benchmark run on V0.2 code has not happened yet. Select 3 NEW repos (never in the 11 used) before the next release cycle. |
+| PyPI publication | MEDIUM | Everything is prepared: `publish.yml` (manual, OIDC Trusted Publisher) + `docs/RELEASE.md`. BLOCKED on the repo owner doing the one-time PyPI side: add the pending trusted publisher (owner=Tong-bit-art, repo=regression-firewall, workflow=publish.yml, env=pypi) and create the `pypi` environment in repo settings. Then tag a release and run the workflow. |
+| CI maintenance | LOW | **DONE 2026-10-25**: checkout@v5, setup-python@v6. |
 | typer.Typer signature: full fix | LOW | Canonical fingerprint works for most cases; edge cases with rich-conditional imports still UNSUPPORTED |
+| Cross-vendor agent validation on V0.2 | LOW | Independent agent validation ran on V0.1 (2026-10-07); repeat on V0.2 with a different vendor when convenient. |
 
 ## Key Files to Read First
 

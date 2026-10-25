@@ -1,4 +1,5 @@
 from regression_firewall.config.schema import (
+    CustomRuleConfig,
     IgnoreConfig,
     NormalizationConfig,
 )
@@ -190,3 +191,96 @@ def test_float_epoch_string_with_temporal_key():
         {"x-benchmark-timestamp": "<TIMESTAMP>"}
     # non-epoch floats stay untouched
     assert n.normalize_json("3.14", key="ratio") == "3.14"
+
+
+# -- custom normalization rules -------------------------------------------------
+
+
+def _norm_with_rules(rules):
+    cfg = NormalizationConfig()
+    cfg.custom_rules = rules
+    return Normalizer(cfg, IgnoreConfig())
+
+
+def test_custom_rule_fullmatch_with_key_hint():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="order_ref", pattern=r"^[A-Z]{3}-\d{6}$", key_hints=["ref"]),
+    ])
+    assert n.normalize_json("ABC-123456", key="order_ref") == "<ORDER_REF>"
+    # key hint mismatch: the rule must not fire
+    assert n.normalize_json("ABC-123456", key="note") == "ABC-123456"
+
+
+def test_custom_rule_without_hints_applies_to_any_key_and_unkeyed():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="span_id", pattern=r"^[0-9a-f]{16}$"),
+    ])
+    assert n.normalize_json("0123456789abcdef", key="span_id") == "<SPAN_ID>"
+    assert n.normalize_json("0123456789abcdef") == "<SPAN_ID>"
+
+
+def test_custom_rule_with_hints_skipped_without_key():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="order_ref", pattern=r"^[A-Z]{3}-\d{6}$", key_hints=["ref"]),
+    ])
+    assert n.normalize_json("ABC-123456") == "ABC-123456"
+
+
+def test_custom_rule_partial_match_not_masked():
+    """Keyed application is full-match: embedded matches must stay visible."""
+    n = _norm_with_rules([
+        CustomRuleConfig(name="order_ref", pattern=r"^[A-Z]{3}-\d{6}$"),
+    ])
+    assert n.normalize_json("x ABC-123456 x") == "x ABC-123456 x"
+
+
+def test_custom_rule_headers_and_cookies():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="trace", pattern=r"^trc-[0-9]+$"),
+    ])
+    assert n.normalize_headers({"X-Trace-Id": "trc-999"}) == {"x-trace-id": "<TRACE>"}
+    assert n.normalize_cookies({"session_ref": "trc-1"}) == {"session_ref": "<TRACE>"}
+
+
+def test_custom_rule_text_sub():
+    """In plain text, rules without key_hints apply as global re.sub (write
+    patterns without anchors)."""
+    n = _norm_with_rules([
+        CustomRuleConfig(name="job", pattern=r"job-[0-9a-f]{8}"),
+    ])
+    assert n.normalize_text("started job-1234abcd ok") == "started <JOB> ok"
+
+
+def test_custom_rule_text_skips_key_scoped_rules():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="order_ref", pattern=r"REF-[0-9]+", key_hints=["ref"]),
+    ])
+    assert n.normalize_text("REF-1 REF-2") == "REF-1 REF-2"
+
+
+def test_custom_rule_runs_before_builtin_rules():
+    """A custom rule's placeholder must win over built-in masking."""
+    n = _norm_with_rules([
+        CustomRuleConfig(name="legacy_token", pattern=r"tok-[0-9a-f-]{30,}"),
+    ])
+    text = "using tok-" + "a" * 40
+    assert n.normalize_text(text) == "using <LEGACY_TOKEN>"
+    assert "<TOKEN>" not in n.normalize_text(text)
+
+
+def test_custom_rule_first_match_wins():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="alpha", pattern=r"AA-\d+"),
+        CustomRuleConfig(name="beta", pattern=r"AA-\d+"),
+    ])
+    assert n.normalize_text("AA-1") == "<ALPHA>"
+
+
+def test_custom_rule_json_nested_values():
+    n = _norm_with_rules([
+        CustomRuleConfig(name="order_ref", pattern=r"^[A-Z]{3}-\d{6}$", key_hints=["ref"]),
+    ])
+    payload = {"order": {"ref": "ABC-123456", "lines": [{"ref": "XYZ-000001"}]}}
+    assert n.normalize_json(payload) == {
+        "order": {"ref": "<ORDER_REF>", "lines": [{"ref": "<ORDER_REF>"}]}
+    }

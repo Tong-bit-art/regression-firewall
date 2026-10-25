@@ -49,6 +49,13 @@ def render_console(result: CheckResult) -> str:
         f"{summary.get('unexpected', 0)} unexpected, {summary.get('uncertain', 0)} uncertain"
     )
 
+    if result.changed_files:
+        out.append(f"Changed files since baseline (git hint): {len(result.changed_files)}")
+        for path in result.changed_files[:10]:
+            out.append(f"  {path}")
+        if len(result.changed_files) > 10:
+            out.append(f"  ... and {len(result.changed_files) - 10} more (see report.md)")
+
     expected = [c for c in result.changes if c.classification == "expected"]
     unexpected = [c for c in result.changes if c.classification != "expected"]
 

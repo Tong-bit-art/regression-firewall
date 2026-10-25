@@ -64,6 +64,7 @@ normalization:            # every rule on by default
   float_precision: true
   whitespace: true
   ansi: true
+  custom_rules: []        # see section 5 below
 
 ignore:
   headers:                # dropped from both sides before diffing
@@ -81,6 +82,37 @@ semantics apply: `*.debug_trace` matches the nested path
 (use the bare name for that). Ignoring a path is a trust decision — the
 check report warns whenever the configuration changed since the baseline.
 
+## 5. Custom rules (V0.2)
+
+When built-in rules miss project-specific volatile data, define your own
+under `normalization.custom_rules`:
+
+```yaml
+normalization:
+  custom_rules:
+    - name: order_ref
+      pattern: '^[A-Z]{3}-[0-9]{6}$'   # required, valid regex
+      key_hints: [ref, order]          # optional: fire only under matching keys
+      placeholder: '<ORDER_REF>'       # optional; default <NAME uppercased>
+```
+
+Semantics:
+
+- **Keyed values** (JSON strings, headers, cookies): the rule fires when the
+  *whole* value full-matches `pattern` and — when `key_hints` is given — the
+  key contains one of the hints (case-insensitive substring). Without
+  `key_hints`, a rule applies to every keyed value, including unkeyed JSON
+  strings.
+- **Plain text** (stdout/stderr): only rules *without* `key_hints` apply,
+  as a global `re.sub` — write those patterns without anchors. Key-scoped
+  rules cannot be applied honestly to free text, so they are skipped there.
+- Custom rules run **before** built-in rules, so a custom placeholder wins.
+- Names must be unique and lowercase (`^[a-z][a-z0-9_-]*$`); placeholders
+  must be angle-bracketed (`<LIKE_THIS>`) so they can never collide with
+  real values.
+- Rules are part of the config hash: changing them between baseline and
+  check triggers the standard config-changed warning.
+
 ## 6. Known tradeoff: stable business dates
 
 The `iso_datetime` rule is value-shaped and key-agnostic, so a *stable*
@@ -93,12 +125,6 @@ or narrow the noise with `ignore.json_paths` elsewhere.
 Defaults for `ignore.headers`: `date`, `content-length` (the latter is fully
 derived from the body, which is diffed directly). `x-request-id` style
 headers do not need ignoring — the `request_ids` rule masks them.
-
-## 5. Extensibility (V0.1)
-
-Rules are plain functions registered in a ordered list in `normalize/rules.py`
-with an on/off switch in config. Custom user rules are a V0.2 item (plugin
-point reserved by the registry shape, nothing speculative built).
 
 
 ## 7. Capture-time redaction (separate from normalization)

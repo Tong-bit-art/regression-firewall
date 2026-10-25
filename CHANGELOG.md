@@ -4,7 +4,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — release-blocker closure (2026-10-07)
+## [Unreleased]
+
+## [0.2.0] - 2026-10-25
+
+Wider surface coverage: OpenAPI-derived probes, user-defined normalization,
+CLI directory watching, and git correlation hints in reports.
+
+### Added
+
+- **OpenAPI import.** `surfaces.http.openapi` derives HTTP probes from an
+  OpenAPI 3.x document (YAML/JSON) at config load time; explicit probes win
+  on id conflicts; `{path}` parameters take values from `set:` (default
+  `1` with a warning). `regression-firewall import-openapi` previews the
+  generated probes. Swagger 2.x and pathless documents are loud config
+  errors. See `docs/OPENAPI_IMPORT.md`.
+- **Custom normalization rules.** `normalization.custom_rules` masks
+  project-specific volatile data: regex pattern (full-match for keyed
+  values, `re.sub` for plain text), optional key hints, angle-bracketed
+  placeholder. Rules are validated (unique lowercase names, compilable
+  patterns), run before built-in rules, and are part of the config hash.
+- **CLI directory watching.** `surfaces.cli.probes[].dirs` watches whole
+  directory trees with fnmatch ignore globs (whole subtrees pruned) and a
+  deterministic per-directory `max_files` cap (truncation warns). New,
+  modified, and deleted files under a watched directory are detected like
+  watched files.
+- **Git diff hints in reports.** `check` reports which files git saw change
+  since the baseline commit (committed diffs + dirty working tree, capped
+  at 200, tool artifacts filtered). Correlation hint only — it never feeds
+  classification, scoring, or the verdict.
+- GitHub issue/PR templates; tag-driven release workflow (tag/version
+  consistency check, changelog-derived release notes, wheel smoke test) and
+  a manual PyPI publish workflow via Trusted Publishers (docs/RELEASE.md).
+- Eval case 21 (`cli_dir_watch_created`): directory-watch detection plus
+  ignore-glob noise control. Suite is now 21 cases.
+
+### Fixed
+
+- CI: `actions/checkout@v4` / `actions/setup-python@v5` bumped to v5/v6
+  (Node 20 deprecation warnings).
+
+## [0.1.1] - 2026-10-07 (never tagged; work shipped on main)
+
+Release-blocker closure.
 
 ### Added
 

@@ -1,0 +1,74 @@
+name: Release
+
+# Tag-driven release: verifies the tag matches pyproject.toml, extracts the
+# changelog section as release notes, builds sdist+wheel, smoke-tests the
+# wheel, and publishes a GitHub Release with the artifacts attached.
+# PyPI publication is a separate, manual workflow (publish.yml) — see
+# docs/RELEASE.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag v$TAG does not match pyproject.toml version $PKG_VERSION"
+            exit 1
+          fi
+          echo "VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          python - <<'PY'
+          import os, pathlib, re, sys
+
+          version = os.environ["VERSION"]
+          changelog = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = re.compile(
+              rf"^## \[{re.escape(version)}\].*?$", re.MULTILINE
+          )
+          match = pattern.search(changelog)
+          if not match:
+              sys.exit(f"CHANGELOG.md has no section for version {version}")
+          rest = changelog[match.end():]
+          nxt = re.search(r"^## \[", rest, re.MULTILINE)
+          section = rest[: nxt.start()] if nxt else rest
+          notes = f"# Regression Firewall {version}\n" + section.strip() + "\n"
+          pathlib.Path("release_notes.md").write_text(notes, encoding="utf-8")
+          print(notes)
+          PY
+
+      - name: Build sdist and wheel
+        run: |
+          pip install build
+          python -m build
+
+      - name: Smoke-test the wheel
+        run: |
+          pip install dist/regression_firewall-*.whl
+          regression-firewall --version
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "regression-firewall $VERSION" \
+            --notes-file release_notes.md

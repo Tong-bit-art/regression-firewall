@@ -1,27 +1,33 @@
 # Regression Firewall — Roadmap
 
-Version: 0.1 (2026-10-04)
+Version: 0.2 (2026-10-25)
 
-Scope discipline: nothing on this list justifies speculative abstraction in
-V0.1. Items are built when they are built, behind the same
-deterministic-first principles.
+Scope discipline: nothing on this list justifies speculative abstraction.
+Items are built when they are built, behind the same deterministic-first
+principles.
 
-## V0.2 — Wider surface coverage
+## V0.2 — Wider surface coverage — SHIPPED 2026-10-25
+
+- [x] User-defined normalization rules (regex + key-hint) in config
+      (`normalization.custom_rules`).
+- [x] OpenAPI import: derive HTTP probes from an OpenAPI 3.x document
+      (`surfaces.http.openapi`, preview via `import-openapi`).
+- [x] CLI watched directories with ignore globs and a per-directory
+      `max_files` cap (`surfaces.cli.probes[].dirs`).
+- [x] Git diff integration: reports list which files changed since the
+      baseline commit as a correlation hint — never used to classify
+      changes as expected.
+- JS/TS public API surface and better HTTP discovery moved to V0.3: both
+  need real design time (static parsing without a Node dependency; route
+  extraction by convention) and did not fit the release.
+
+## V0.3 — Wider languages, environment behavior
 
 - JavaScript / TypeScript public API surface (package exports, named
   exports, default export) via static parsing.
-- OpenAPI import: derive HTTP probes from an OpenAPI document.
 - Better HTTP discovery: route extraction from FastAPI/Flask apps by
   convention, not just explicit `discover.app` config.
-- Git diff integration: surface-level hint of which files changed, used to
-  *order* checks (never to classify changes as expected).
-- Unknown generated-file detection for the CLI surface (watched directories
-  with ignore globs).
-- User-defined normalization rules (regex + key-hint) in config.
-
-## V0.3 — Environment behavior
-
-- Filesystem behavior surface (beyond generated files): read/write footprints.
+- Filesystem behavior surface (beyond watched files/dirs): read/write footprints.
 - Configuration drift detection (config files that code reads).
 - Environment variable read behavior for CLI probes.
 

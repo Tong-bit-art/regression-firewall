@@ -44,6 +44,22 @@ def render_markdown(result: CheckResult) -> str:
                    "behavior; treat this result with reduced trust.")
         out.append("")
 
+    if result.changed_files:
+        out.append("## Changed Files (git hint)")
+        out.append("")
+        out.append("Files git reports as changed since the baseline was captured "
+                   "(committed diffs and dirty working tree). Correlation hint only — "
+                   "it never affects the verdict.")
+        out.append("")
+        for path in result.changed_files[:50]:
+            out.append(f"- `{path}`")
+        if len(result.changed_files) > 50:
+            out.append(f"- ... and {len(result.changed_files) - 50} more")
+        if result.changed_files_truncated:
+            out.append("")
+            out.append("*The list was truncated at the report cap.*")
+        out.append("")
+
     unexpected = sorted(
         (c for c in result.changes if c.classification != "expected"),
         key=lambda c: (-severity_rank(c.severity), c.target, c.category),

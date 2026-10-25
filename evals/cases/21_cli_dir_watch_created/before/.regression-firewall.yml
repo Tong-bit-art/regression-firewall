@@ -1,0 +1,14 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: true
+    probes:
+      - id: build
+        command: ["python", "deploy.py"]
+        dirs:
+          - path: out
+            ignore: ["*.tmp"]
+  public_api:
+    enabled: false

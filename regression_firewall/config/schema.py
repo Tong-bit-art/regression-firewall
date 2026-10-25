@@ -32,6 +32,20 @@ class HttpProbeConfig:
 
 
 @dataclass
+class OpenApiConfig:
+    """Derive HTTP probes from an OpenAPI 3.x document at config load time.
+
+    `file` is resolved relative to the config file's directory. `set` maps
+    {path} parameter names to concrete values; unmapped parameters default to
+    '1' (with a warning). `methods` optionally filters HTTP methods.
+    """
+
+    file: str = ""
+    set: dict = field(default_factory=dict)
+    methods: list = field(default_factory=list)
+
+
+@dataclass
 class HttpSurfaceConfig:
     enabled: bool = True
     base_url: str = ""
@@ -39,7 +53,19 @@ class HttpSurfaceConfig:
     ready_path: str = "/"
     ready_timeout: float = 30.0
     discover_app: Optional[str] = None
+    openapi: Optional[OpenApiConfig] = None
     probes: list = field(default_factory=list)  # list[HttpProbeConfig]
+
+
+@dataclass
+class DirWatchConfig:
+    """A watched directory for a CLI probe: every regular file below it is
+    tracked (content hash + size), so files the probe creates anywhere in the
+    tree are noticed without listing them one by one."""
+
+    path: str = ""
+    ignore: list = field(default_factory=list)  # fnmatch globs (dir names or rel posix paths)
+    max_files: int = 2000
 
 
 @dataclass
@@ -49,6 +75,7 @@ class CliProbeConfig:
     cwd: str = "."
     env: dict = field(default_factory=dict)
     files: list = field(default_factory=list)
+    dirs: list = field(default_factory=list)  # list[DirWatchConfig]
     timeout: float = 60.0
 
 
@@ -77,6 +104,27 @@ class IgnoreConfig:
     json_paths: list = field(default_factory=list)
 
 
+CUSTOM_RULE_NAME_RE_PATTERN = r"^[a-z][a-z0-9_-]*$"
+
+
+@dataclass
+class CustomRuleConfig:
+    """A user-defined normalization rule.
+
+    ``pattern`` is applied to string values: full-match for keyed values
+    (JSON strings, headers, cookies), and global re.sub for plain text
+    (stdout/stderr) — but only when the rule declares no ``key_hints``.
+    """
+
+    name: str = ""
+    pattern: str = ""
+    key_hints: list = field(default_factory=list)
+    placeholder: Optional[str] = None
+
+    def resolved_placeholder(self) -> str:
+        return self.placeholder if self.placeholder else f"<{self.name.upper()}>"
+
+
 @dataclass
 class NormalizationConfig:
     uuid: bool = True
@@ -89,6 +137,7 @@ class NormalizationConfig:
     float_precision: bool = True
     whitespace: bool = True
     ansi: bool = True
+    custom_rules: list = field(default_factory=list)  # list[CustomRuleConfig]
 
 
 @dataclass
@@ -201,13 +250,7 @@ def parse_config(raw: dict, source: str = "<config>") -> Config:
     cfg.ignore = _parse_section(
         raw.get("ignore"), IgnoreConfig, {"headers": "list", "json_paths": "list"}, "ignore", source
     )
-    cfg.normalization = _parse_section(
-        raw.get("normalization"),
-        NormalizationConfig,
-        {f.name: "bool" for f in dataclasses.fields(NormalizationConfig)},
-        "normalization",
-        source,
-    )
+    cfg.normalization = _parse_normalization(raw.get("normalization"), source)
     cfg.redaction = _parse_section(
         raw.get("redaction"),
         RedactionConfig,
@@ -279,13 +322,15 @@ def _parse_http(raw, source: str) -> HttpSurfaceConfig:
         return cfg
     if not isinstance(raw, dict):
         raise ConfigError(f"{source}: surfaces.http must be a mapping")
-    known = {"enabled", "base_url", "server", "ready_path", "ready_timeout", "discover_app", "probes"}
+    known = {"enabled", "base_url", "server", "ready_path", "ready_timeout", "discover_app",
+             "openapi", "probes"}
     _check_keys(raw, known, "surfaces.http", source)
     cfg.enabled = _as_bool(raw.get("enabled", True), "surfaces.http.enabled", source)
     cfg.base_url = _as_str(raw.get("base_url", ""), "surfaces.http.base_url", source)
     cfg.ready_path = _as_str(raw.get("ready_path", "/"), "surfaces.http.ready_path", source)
     cfg.ready_timeout = _as_number(raw.get("ready_timeout", 30.0), "surfaces.http.ready_timeout", source)
     cfg.discover_app = _as_optional_str(raw.get("discover_app"), "surfaces.http.discover_app", source)
+    cfg.openapi = _parse_openapi(raw.get("openapi"), source)
     server_raw = raw.get("server")
     if server_raw is not None:
         if not isinstance(server_raw, dict):
@@ -303,6 +348,44 @@ def _parse_http(raw, source: str) -> HttpSurfaceConfig:
     for i, probe_raw in enumerate(probes_raw):
         cfg.probes.append(_parse_http_probe(probe_raw, i, source))
     return cfg
+
+
+def _parse_openapi(raw, source: str) -> OpenApiConfig | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{source}: surfaces.http.openapi must be a mapping")
+    _check_keys(raw, {"file", "set", "methods"}, "surfaces.http.openapi", source)
+    file_value = raw.get("file")
+    if not isinstance(file_value, str) or not file_value.strip():
+        raise ConfigError(f"{source}: surfaces.http.openapi.file is required")
+    set_values = raw.get("set") or {}
+    if not isinstance(set_values, dict) or not all(
+        isinstance(k, str) and isinstance(v, (str, int, float)) for k, v in set_values.items()
+    ):
+        raise ConfigError(
+            f"{source}: surfaces.http.openapi.set must be a mapping of "
+            "parameter names to string/number values"
+        )
+    methods = raw.get("methods") or []
+    if not isinstance(methods, list) or not methods:
+        methods = []
+    else:
+        if not all(isinstance(m, str) and m.strip() for m in methods):
+            raise ConfigError(
+                f"{source}: surfaces.http.openapi.methods must be a list of method names"
+            )
+        bad = [m for m in methods if m.strip().upper() not in PROBE_METHODS]
+        if bad:
+            raise ConfigError(
+                f"{source}: surfaces.http.openapi.methods contains unsupported "
+                f"method(s) {', '.join(bad)}; supported: {', '.join(PROBE_METHODS)}"
+            )
+    return OpenApiConfig(
+        file=file_value,
+        set={str(k): v for k, v in set_values.items()},
+        methods=[str(m).strip().upper() for m in methods],
+    )
 
 
 def _parse_http_probe(raw, index: int, source: str) -> HttpProbeConfig:
@@ -341,7 +424,7 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
     for i, probe_raw in enumerate(probes_raw):
         if not isinstance(probe_raw, dict):
             raise ConfigError(f"{source}: surfaces.cli.probes[{i}] must be a mapping")
-        known_probe = {"id", "command", "cwd", "env", "files", "timeout"}
+        known_probe = {"id", "command", "cwd", "env", "files", "dirs", "timeout"}
         _check_keys(probe_raw, known_probe, f"surfaces.cli.probes[{i}]", source)
         command = _as_str_list(probe_raw.get("command", []), f"surfaces.cli.probes[{i}].command", source)
         probe = CliProbeConfig(
@@ -350,10 +433,44 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
             cwd=_as_str(probe_raw.get("cwd", "."), f"surfaces.cli.probes[{i}].cwd", source),
             env=_as_str_map(probe_raw.get("env") or {}, f"surfaces.cli.probes[{i}].env", source),
             files=_as_str_list(probe_raw.get("files") or [], f"surfaces.cli.probes[{i}].files", source),
+            dirs=_parse_dir_watches(probe_raw.get("dirs"), i, source),
             timeout=_as_number(probe_raw.get("timeout", 60.0), f"surfaces.cli.probes[{i}].timeout", source),
         )
         cfg.probes.append(probe)
     return cfg
+
+
+def _parse_dir_watches(raw, probe_index: int, source: str) -> list:
+    where = f"surfaces.cli.probes[{probe_index}].dirs"
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise ConfigError(f"{source}: {where} must be a list")
+    watches = []
+    for i, item in enumerate(raw):
+        entry_where = f"{where}[{i}]"
+        if isinstance(item, str):
+            item = {"path": item}
+        if not isinstance(item, dict):
+            raise ConfigError(
+                f"{source}: {entry_where} must be a mapping or a path string"
+            )
+        _check_keys(item, {"path", "ignore", "max_files"}, entry_where, source)
+        path = item.get("path")
+        if not isinstance(path, str) or not path.strip():
+            raise ConfigError(f"{source}: {entry_where}.path is required")
+        ignore = item.get("ignore", [])
+        if not isinstance(ignore, list) or not all(isinstance(g, str) and g for g in ignore):
+            raise ConfigError(
+                f"{source}: {entry_where}.ignore must be a list of non-empty glob strings"
+            )
+        max_files = item.get("max_files", 2000)
+        if isinstance(max_files, bool) or not isinstance(max_files, int) or max_files < 1:
+            raise ConfigError(
+                f"{source}: {entry_where}.max_files must be a positive integer"
+            )
+        watches.append(DirWatchConfig(path=path, ignore=list(ignore), max_files=max_files))
+    return watches
 
 
 def _parse_api(raw, source: str) -> ApiSurfaceConfig:
@@ -405,6 +522,83 @@ def _parse_section(raw, dataclass_cls, type_map, name: str, source: str):
             else:
                 setattr(cfg, key, _as_str_list(value, f"{name}.{key}", source))
     return cfg
+
+
+NORMALIZATION_BOOL_KEYS = (
+    "uuid", "iso_datetime", "epoch_timestamps", "request_ids", "tokens",
+    "temp_paths", "durations", "float_precision", "whitespace", "ansi",
+)
+
+
+def _parse_normalization(raw, source: str) -> NormalizationConfig:
+    cfg = NormalizationConfig()
+    if raw is None:
+        return cfg
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{source}: 'normalization' must be a mapping")
+    _check_keys(raw, set(NORMALIZATION_BOOL_KEYS) | {"custom_rules"}, "normalization", source)
+    for key in NORMALIZATION_BOOL_KEYS:
+        if key in raw:
+            setattr(cfg, key, _as_bool(raw[key], f"normalization.{key}", source))
+    if "custom_rules" in raw:
+        cfg.custom_rules = _parse_custom_rules(raw["custom_rules"], source)
+    return cfg
+
+
+def _parse_custom_rules(raw, source: str) -> list:
+    import re as _re
+
+    if not isinstance(raw, list):
+        raise ConfigError(f"{source}: normalization.custom_rules must be a list")
+    rules = []
+    seen_names = set()
+    for i, item in enumerate(raw):
+        where = f"normalization.custom_rules[{i}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{source}: {where} must be a mapping")
+        _check_keys(item, {"name", "pattern", "key_hints", "placeholder"}, where, source)
+        name = item.get("name")
+        if not isinstance(name, str) or not _re.match(CUSTOM_RULE_NAME_RE_PATTERN, name):
+            raise ConfigError(
+                f"{source}: {where}.name must match {CUSTOM_RULE_NAME_RE_PATTERN!r}, got {name!r}"
+            )
+        if name in seen_names:
+            raise ConfigError(f"{source}: {where}: duplicate rule name {name!r}")
+        seen_names.add(name)
+        pattern = item.get("pattern")
+        if not isinstance(pattern, str) or not pattern:
+            raise ConfigError(f"{source}: {where}.pattern must be a non-empty string")
+        try:
+            _re.compile(pattern)
+        except _re.error as exc:
+            raise ConfigError(f"{source}: {where}.pattern does not compile: {exc}") from exc
+        key_hints = item.get("key_hints", [])
+        if not isinstance(key_hints, list) or not all(
+            isinstance(h, str) and h for h in key_hints
+        ):
+            raise ConfigError(
+                f"{source}: {where}.key_hints must be a list of non-empty strings"
+            )
+        placeholder = item.get("placeholder")
+        if placeholder is not None:
+            if (
+                not isinstance(placeholder, str)
+                or len(placeholder) < 3
+                or not placeholder.startswith("<")
+                or not placeholder.endswith(">")
+                or "<" in placeholder[1:-1]
+                or ">" in placeholder[1:-1]
+            ):
+                raise ConfigError(
+                    f"{source}: {where}.placeholder must look like '<TOKEN>' "
+                    f"(angle-bracketed, no nested brackets), got {placeholder!r}"
+                )
+        rules.append(
+            CustomRuleConfig(
+                name=name, pattern=pattern, key_hints=list(key_hints), placeholder=placeholder
+            )
+        )
+    return rules
 
 
 def _check_keys(raw: dict, known: set, where: str, source: str) -> None:

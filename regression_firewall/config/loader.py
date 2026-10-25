@@ -55,7 +55,14 @@ def load_config(project_root: Path, config_path: Path | None = None) -> tuple:
         except yaml.YAMLError as e:
             raise ConfigError(f"{path}: invalid YAML: {e}") from e
     cfg = parse_config(raw if raw is not None else {}, source=str(path))
-    return cfg, [], path
+    warnings = []
+    if cfg.http.openapi is not None:
+        # Generated probes are appended at load time so baseline/check/discover
+        # all see the same suite; explicit probes win on id conflicts.
+        from .openapi import merge_openapi_probes
+
+        warnings.extend(merge_openapi_probes(cfg.http, path.parent))
+    return cfg, warnings, path
 
 
 def config_hash(cfg: Config) -> str:

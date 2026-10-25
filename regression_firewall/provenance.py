@@ -12,6 +12,63 @@ import subprocess
 from pathlib import Path
 
 GIT_TIMEOUT = 10.0
+CHANGED_FILES_CAP = 200
+
+
+def collect_changed_files(project_root: Path, base_commit, current_dirty: bool = None) -> dict:
+    """Files changed since the baseline commit: committed diffs plus, when the
+    current tree is dirty, the modified/untracked files from status.
+
+    This is a correlation HINT for reports — it never affects classification,
+    scoring, or the verdict. Returns {available, files, truncated}.
+    """
+    result = {"available": False, "files": [], "truncated": False}
+    if not base_commit:
+        return result
+    try:
+        diff = subprocess.run(
+            ["git", "diff", "--name-only", f"{base_commit}..HEAD"],
+            cwd=str(project_root), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT,
+        )
+        if diff.returncode != 0:
+            return result
+        files = [line.strip() for line in diff.stdout.splitlines() if line.strip()]
+        if current_dirty:
+            status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(project_root), capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=GIT_TIMEOUT,
+            )
+            if status.returncode == 0:
+                files.extend(_porcelain_paths(status.stdout))
+        unique = sorted(
+            f for f in set(files) if not f.startswith(".regression-firewall")
+        )
+        if len(unique) > CHANGED_FILES_CAP:
+            unique = unique[:CHANGED_FILES_CAP]
+            result["truncated"] = True
+        result["available"] = True
+        result["files"] = unique
+        return result
+    except (OSError, subprocess.TimeoutExpired):
+        return result
+
+
+def _porcelain_paths(status_output: str) -> list:
+    """Parse `git status --porcelain` output into paths. Handles renames
+    ('R  old -> new' → the new path) and the quoting git applies to paths
+    with special characters."""
+    paths = []
+    for line in status_output.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:].strip().strip('"')
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1].strip().strip('"')
+        if path:
+            paths.append(path)
+    return paths
 
 
 def collect_git_state(project_root: Path) -> dict:

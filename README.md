@@ -2,6 +2,12 @@
 
 > A behavioral regression safety layer for AI coding agents.
 
+[![Tests](https://github.com/Tong-bit-art/regression-firewall/actions/workflows/test.yml/badge.svg)](https://github.com/Tong-bit-art/regression-firewall/actions/workflows/test.yml)
+![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
+![Platforms](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status: Beta](https://img.shields.io/badge/status-beta-orange)](CHANGELOG.md)
+
 **AI changed the feature you asked for. What else did it change?**
 
 Regression Firewall captures your software's observable behavior *before* an
@@ -45,13 +51,14 @@ Regression Firewall closes that gap:
 A `BLOCK` means: *something the user did not ask for broke.* The agent must
 not call the task complete.
 
-## What it checks (V0.1)
+## What it checks
 
 | Surface | Captures | Detects |
 |---|---|---|
-| **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
-| **CLI** | stdout, stderr, exit code, watched generated files | exit-code flips, output changes, new/deleted/modified files |
+| **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE; probes can be derived from an OpenAPI 3.x document | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
+| **CLI** | stdout, stderr, exit code, watched files *and watched directories* | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory |
 | **Public API (Python)** | importable symbols, signatures, `__all__`, submodules | removed symbols (CRITICAL), signature changes, export changes |
+| **Volatile data** | — | masked by built-in normalizers plus *your own* custom rules (regex + key hints) |
 
 Not (yet): JavaScript/TypeScript exports, database behavior, performance,
 browser UI, message queues. See [Roadmap](#roadmap).
@@ -60,11 +67,13 @@ browser UI, message queues. See [Roadmap](#roadmap).
 
 Requires Python 3.9+.
 
-> **Note:** Regression Firewall is **not yet published on PyPI.** Install
-> from a clone of this repository:
+> **Note:** Regression Firewall is **not yet on PyPI.** Automated publishing
+> is prepared (tag-driven release workflow; PyPI via Trusted Publishers —
+> see [docs/RELEASE.md](docs/RELEASE.md)). Until the first PyPI upload,
+> install from a clone of this repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Tong-bit-art/regression-firewall
 cd regression-firewall
 pip install .
 ```
@@ -195,6 +204,7 @@ of the package — or fail.
 | `check` | Re-capture, diff against baseline, classify, score, write `report.json` + `report.md` |
 | `report` | Re-display the latest report (`--format console\|markdown\|json`) |
 | `explain <id>` | Full detail for one change |
+| `import-openapi` | Preview the HTTP probes an OpenAPI 3.x document would generate |
 
 ## Configuration
 
@@ -205,6 +215,19 @@ surfaces:
   http:
     ready_timeout: 30     # seconds to wait for the managed server; raise
                           # it if your server resolves DNS slowly on bind
+    openapi:              # derive HTTP probes from an OpenAPI 3.x document
+      file: openapi.yaml  # values for {path} params via `set:` — docs/OPENAPI_IMPORT.md
+      set: {userId: "1"}
+
+  cli:
+    probes:
+      - id: build
+        command: ["python", "build.py"]
+        files: ["out/receipt.json"]
+        dirs:                       # watch whole directories, not just files
+          - path: out/
+            ignore: ["*.tmp", "__pycache__"]
+            max_files: 2000
 
 thresholds:
   review_score: 30        # REVIEW at or above this score
@@ -220,12 +243,23 @@ normalization:            # every rule individually switchable
   epoch_timestamps: true
   tokens: true
   # ... see docs/NORMALIZATION.md
+  custom_rules:           # your own masking for project-specific noise
+    - name: order_ref
+      pattern: '^[A-Z]{3}-[0-9]{6}$'
+      key_hints: [ref, order]      # optional: fire only under matching keys
+      placeholder: '<ORDER_REF>'
 
 severity_overrides:       # "category" or "surface:category"
   header_changed: medium
 ```
 
-See [docs/NORMALIZATION.md](docs/NORMALIZATION.md) for the full rule catalog.
+After a `check`, reports also list **which files changed since the baseline**
+(git diff + dirty working tree) as a correlation hint — it never affects the
+verdict.
+
+See [docs/NORMALIZATION.md](docs/NORMALIZATION.md) for the full rule catalog
+and [docs/OPENAPI_IMPORT.md](docs/OPENAPI_IMPORT.md) for OpenAPI generation
+rules.
 
 ## Evals & Evidence
 
@@ -234,10 +268,10 @@ by configured probes. It cannot detect behavior that no probe covers.
 
 ### Bundled eval (synthetic)
 
-20 hand-built cases: status flips, removed fields, type changes, exit-code
+21 hand-built cases: status flips, removed fields, type changes, exit-code
 flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
-**20/20 passed.** See [docs/EVALS.md](docs/EVALS.md).
+**21/21 passed.** See [docs/EVALS.md](docs/EVALS.md).
 
 ### Validation corpus (real projects)
 
@@ -285,11 +319,13 @@ correctly. Findings and caveats:
 ## Limitations (honest list)
 
 - **HTTP probes must be configured.** `discover` can list routes for
-  FastAPI/Flask apps via `discover.app`, but V0.1 does not auto-derive a
-  full probe suite — you tell it what to watch.
-- **Public API surface is Python only.** JS/TS exports are planned for V0.2.
-- **CLI generated-file tracking uses an explicit watch list.** Unknown new
-  files elsewhere are not noticed.
+  FastAPI/Flask apps via `discover.app`, and OpenAPI documents can derive a
+  probe suite automatically — but the tool does not auto-invent probes from
+  arbitrary code.
+- **Public API surface is Python only.** JS/TS exports are planned for V0.3.
+- **CLI watching is explicit.** Files and directories are watched because
+  you listed them (`files` / `dirs`, with ignore globs and a per-dir
+  `max_files` cap). Unknown files outside watched locations are not noticed.
 - **CLI free-text secrets.** Response headers/cookies/JSON bodies are
   redacted at capture time, but arbitrary secrets printed to stdout/stderr
   cannot be reliably identified and are stored raw (documented; no risky
@@ -315,8 +351,10 @@ correctly. Findings and caveats:
 
 ## Roadmap
 
-- **V0.2** — JS/TS public API, OpenAPI import, better HTTP discovery, git-diff hints
-- **V0.3** — filesystem & environment behavior
+- **V0.2** *(shipped 2026-10)* — OpenAPI import, custom normalization rules,
+  CLI directory watching, git-diff hints in reports
+- **V0.3** — JS/TS public API, filesystem & environment behavior, better
+  HTTP discovery
 - **V0.4** — database behavior (query counts, N+1 signals)
 - **V0.5** — selective regression analysis (run only affected surfaces)
 - **V0.6** — opt-in performance regression

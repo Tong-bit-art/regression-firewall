@@ -23,6 +23,10 @@ class CheckResult:
     config_changed_since_baseline: bool = False
     baseline_trust_warning: bool = False
     warnings: list = field(default_factory=list)
+    # Correlation hint: files git reports as changed since the baseline commit
+    # (committed diffs + dirty working tree). Never affects the verdict.
+    changed_files: list = field(default_factory=list)
+    changed_files_truncated: bool = False
     created_at: str = ""
     tool_version: str = ""
     project: dict = field(default_factory=dict)
@@ -48,6 +52,8 @@ class CheckResult:
             "intent_audit": self.intent_audit,
             "config_changed_since_baseline": self.config_changed_since_baseline,
             "baseline_trust_warning": self.baseline_trust_warning,
+            "changed_files": list(self.changed_files),
+            "changed_files_truncated": self.changed_files_truncated,
             "warnings": list(self.warnings),
             "changes": [c.to_dict() for c in self.changes],
         }
@@ -66,6 +72,8 @@ class CheckResult:
                 d.get("config_changed_since_baseline", False)
             ),
             baseline_trust_warning=bool(d.get("baseline_trust_warning", False)),
+            changed_files=list(d.get("changed_files") or []),
+            changed_files_truncated=bool(d.get("changed_files_truncated", False)),
             warnings=list(d.get("warnings", [])),
             created_at=d.get("created_at", ""),
             tool_version=d.get("tool_version", ""),
