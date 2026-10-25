@@ -227,6 +227,7 @@ of the package — or fail.
 | `discover --emit-probes [MODULE:ATTR]` | Generate ready-to-paste HTTP probes from an app's **real routes** (spec defaults to the best auto-detected app); parameterized paths are excluded with a note |
 | `baseline` | Capture current behavior into `.regression-firewall/baseline.json` |
 | `check` | Re-capture, diff against baseline, classify, score, write `report.json` + `report.md` |
+| `check --select` | Capture only probes whose tracked paths intersect the changed-file set (opt-in; skips are recorded, unknown deps always run) |
 | `report` | Re-display the latest report (`--format console\|markdown\|json`) |
 | `explain <id>` | Full detail for one change |
 | `import-openapi` | Preview the HTTP probes an OpenAPI 3.x document would generate |

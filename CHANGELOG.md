@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Selective regression analysis (V0.5).** `check --select` maps the
+  changed-file set (git) onto each probe's tracked paths — command script
+  files, `-m` module directories, watched files/dirs, the managed-server
+  command, public-API package directories, and JS entry files with their
+  resolved re-export chains — and skips probes nothing changed can affect.
+  Conservative by contract: unknown dependencies always run, the decision
+  unit is the probe, every skip is recorded in the report (JSON
+  `selection`, console, Markdown), a check that skips everything cannot
+  PASS, and default `check` behavior is unchanged (selection is opt-in).
+
 - **Database behavior tracing (V0.4).** Per-probe opt-in `trace.sqlite`
   records stdlib sqlite3 usage through the documented factory subclass
   hook (C types cannot be monkeypatched; they are subclassable):

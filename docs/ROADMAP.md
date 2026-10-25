@@ -52,11 +52,20 @@ principles.
   databases (driver-level tracing), HTTP-request-scoped N+1 detection
   (needs server-process instrumentation), schema-sensitive reads.
 
-## V0.5 — Selective regression analysis
+## V0.5 — Selective regression analysis — SHIPPED 2026-10-25
 
-- git diff + AST + dependency information → run only the behavior surfaces
-  plausibly affected by the change. This is the performance unlock for large
-  projects; it must never silently *skip* a surface that looks affected.
+- [x] `check --select` (opt-in per invocation): the changed-file set (git
+      baseline commit -> now + dirty files) is mapped conservatively onto
+      each probe's tracked paths (command script files, `-m` module dirs,
+      watched files/dirs, managed-server command, API package dirs, JS entry
+      + resolved re-export chain). Unaffected probes are NOT run.
+- Safety contract, implemented: unknown dependencies ALWAYS run; the
+  decision unit is the probe; every skip is recorded in the report
+  (`selection` field + console + Markdown); a selective check that skips
+  everything cannot PASS (no-evidence guard); there is no import-graph/AST
+  reachability yet, so anything the mapping cannot see counts as affected.
+- Known granularity limit (documented): file-level mapping — a change to a
+  sibling file of the tracked script does not select the probe.
 
 ## V0.6 — Performance regression
 
