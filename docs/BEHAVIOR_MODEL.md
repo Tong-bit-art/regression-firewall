@@ -182,6 +182,7 @@ Every detected difference is one structured `Change`:
 | `db_query_count_changed` (trace.sqlite) | LOW | UNCERTAIN |
 | `db_table_written_added` (trace.sqlite) | MEDIUM | UNCERTAIN |
 | `db_table_written_removed` (trace.sqlite) | MEDIUM | UNCERTAIN |
+| `runtime_regressed` (performance) | MEDIUM | UNCERTAIN |
 | `capture_error` | HIGH | UNEXPECTED |
 
 Tracing (`trace.fs_writes` / `trace.env_reads`) is opt-in per probe and
@@ -203,6 +204,18 @@ UPDATE / DELETE / REPLACE / CREATE / DROP / ALTER) are extracted
 best-effort. NOT traced (invisible, never guessed): other drivers, ORMs
 (SQLAlchemy etc.), network databases, `executemany` row multiplicity,
 connections created with a custom `factory`.
+
+## Performance measurement (opt-in, V0.6)
+
+`probe.performance` (`enabled`, `repeat` = 5, `warmup` = 1, `max_ratio` =
+2.0) runs the command `warmup` untimed times, then `repeat` timed times;
+the captured behavior comes from the last run and the sorted durations plus
+their median (ms) are stored. At diff time, `median_after / median_before >
+max_ratio` is `runtime_regressed` — MEDIUM, UNCERTAIN, so it forces a human
+review and can never auto-BLOCK. Timing is machine-dependent: budgets are
+ratios (never absolute milliseconds), and the baseline stays machine-local.
+Traces accumulate over all runs on both sides, so trace counts remain
+comparable. Default: off.
 ### Public API
 
 | Category | Default severity | Classification when unmatched |

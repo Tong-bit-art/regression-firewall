@@ -77,7 +77,25 @@ class CliProbeConfig:
     files: list = field(default_factory=list)
     dirs: list = field(default_factory=list)  # list[DirWatchConfig]
     trace: Optional["TraceConfig"] = None  # opt-in Python behavior tracing
+    performance: Optional["PerformanceConfig"] = None  # opt-in timing
     timeout: float = 60.0
+
+
+@dataclass
+class PerformanceConfig:
+    """Opt-in runtime measurement for a CLI probe.
+
+    The probe runs `warmup` untimed times, then `repeat` timed times; the
+    captured behavior comes from the last timed run, and the MEDIAN duration
+    is recorded. At diff time, median_after / median_before above `max_ratio`
+    is a runtime regression. Timing is machine-dependent and noisy: this is
+    never on by default, and the verdict it produces is UNCERTAIN (human
+    review), never an automatic BLOCK."""
+
+    enabled: bool = False
+    repeat: int = 5
+    warmup: int = 1
+    max_ratio: float = 2.0
 
 
 @dataclass
@@ -461,7 +479,8 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
     for i, probe_raw in enumerate(probes_raw):
         if not isinstance(probe_raw, dict):
             raise ConfigError(f"{source}: surfaces.cli.probes[{i}] must be a mapping")
-        known_probe = {"id", "command", "cwd", "env", "files", "dirs", "trace", "timeout"}
+        known_probe = {"id", "command", "cwd", "env", "files", "dirs", "trace",
+                       "performance", "timeout"}
         _check_keys(probe_raw, known_probe, f"surfaces.cli.probes[{i}]", source)
         command = _as_str_list(probe_raw.get("command", []), f"surfaces.cli.probes[{i}].command", source)
         probe = CliProbeConfig(
@@ -472,6 +491,7 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
             files=_as_str_list(probe_raw.get("files") or [], f"surfaces.cli.probes[{i}].files", source),
             dirs=_parse_dir_watches(probe_raw.get("dirs"), i, source),
             trace=_parse_trace(probe_raw.get("trace"), i, source),
+            performance=_parse_performance(probe_raw.get("performance"), i, source),
             timeout=_as_number(probe_raw.get("timeout", 60.0), f"surfaces.cli.probes[{i}].timeout", source),
         )
         cfg.probes.append(probe)
@@ -509,6 +529,32 @@ def _parse_dir_watches(raw, probe_index: int, source: str) -> list:
             )
         watches.append(DirWatchConfig(path=path, ignore=list(ignore), max_files=max_files))
     return watches
+
+
+def _parse_performance(raw, probe_index: int, source: str) -> PerformanceConfig | None:
+    if raw is None:
+        return None
+    where = f"surfaces.cli.probes[{probe_index}].performance"
+    if isinstance(raw, bool):
+        raw = {"enabled": raw}
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{source}: {where} must be a mapping or a boolean")
+    _check_keys(raw, {"enabled", "repeat", "warmup", "max_ratio"}, where, source)
+    perf = PerformanceConfig(
+        enabled=_as_bool(raw.get("enabled", True), f"{where}.enabled", source),
+        repeat=_as_int(raw.get("repeat", 5), f"{where}.repeat", source),
+        warmup=_as_int(raw.get("warmup", 1), f"{where}.warmup", source),
+        max_ratio=_as_number(raw.get("max_ratio", 2.0), f"{where}.max_ratio", source),
+    )
+    if not perf.enabled:
+        return None
+    if perf.repeat < 1:
+        raise ConfigError(f"{source}: {where}.repeat must be >= 1")
+    if perf.warmup < 0:
+        raise ConfigError(f"{source}: {where}.warmup must be >= 0")
+    if perf.max_ratio <= 1.0:
+        raise ConfigError(f"{source}: {where}.max_ratio must be > 1.0")
+    return perf
 
 
 def _parse_trace(raw, probe_index: int, source: str) -> TraceConfig | None:

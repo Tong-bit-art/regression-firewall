@@ -67,10 +67,15 @@ principles.
 - Known granularity limit (documented): file-level mapping — a change to a
   sibling file of the tracked script does not select the probe.
 
-## V0.6 — Performance regression
+## V0.6 — Performance regression — SHIPPED 2026-10-25
 
-- Repeat + median + variance-based timing thresholds with warm-up.
-- Explicitly opt-in; timing is noise-prone and must default off.
+- [x] `probe.performance` (`enabled`, `repeat` = 5, `warmup` = 1,
+      `max_ratio` = 2.0): warmup + timed repeats, median stored with the
+      sorted durations, median-ratio budget at diff time. `runtime_regressed`
+      is MEDIUM/UNCERTAIN — it forces human review and can never auto-BLOCK.
+      Explicitly opt-in and default off (timing is noise-prone).
+- Residual (not scheduled): variance-aware adaptive thresholds, HTTP-scoped
+  latency budgets.
 
 ## V1.0 — Maturity
 

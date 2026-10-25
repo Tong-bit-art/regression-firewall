@@ -56,7 +56,7 @@ not call the task complete.
 | Surface | Captures | Detects |
 |---|---|---|
 | **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE; probes can be derived from an OpenAPI 3.x document or generated from real routes via `discover --emit-probes` | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
-| **CLI** | stdout, stderr, exit code, watched files *and watched directories*; opt-in tracing of **filesystem writes**, **environment-variable reads** (names only) and **sqlite3 query shapes + write tables** (Python commands) | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory, new or vanished write targets, new or dropped env-var dependencies, query-set and query-count changes (N+1 signal), new or dropped write tables |
+| **CLI** | stdout, stderr, exit code, watched files *and watched directories*; opt-in tracing of **filesystem writes**, **environment-variable reads** (names only) and **sqlite3 query shapes + write tables** (Python commands) | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory, new or vanished write targets, new or dropped env-var dependencies, query-set and query-count changes (N+1 signal), new or dropped write tables, opt-in runtime-budget regressions (median-ratio) |
 | **Public API (Python)** | importable symbols, signatures, `__all__`, submodules | removed symbols (CRITICAL), signature changes, export changes |
 | **JS/TS API** | static extraction of ESM/CJS exports from entry files, incl. one-hop re-export resolution (`export {x} from`, `export * from`) — nothing is executed | removed exports (CRITICAL), new exports, signature/kind changes |
 | **Volatile data** | — | masked by built-in normalizers plus *your own* custom rules (regex + key hints) |
@@ -258,6 +258,11 @@ surfaces:
           fs_writes: true           # record which paths the command writes
           env_reads: true           # record which env var NAMES it reads
           sqlite: true              # record sqlite3 query shapes + write tables
+        performance:                # opt-in runtime budget (default off)
+          enabled: true
+          repeat: 5                 # timed runs; the median is compared
+          warmup: 1
+          max_ratio: 2.0            # median_after / median_before budget
 
   js_api:
     probes:
@@ -303,10 +308,10 @@ by configured probes. It cannot detect behavior that no probe covers.
 
 ### Bundled eval (synthetic)
 
-23 hand-built cases: status flips, removed fields, type changes, exit-code
+24 hand-built cases: status flips, removed fields, type changes, exit-code
 flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
-**23/23 passed.** See [docs/EVALS.md](docs/EVALS.md).
+**24/24 passed.** See [docs/EVALS.md](docs/EVALS.md).
 
 ### Validation corpus (real projects)
 

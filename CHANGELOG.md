@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Performance regression budgets (V0.6).** Per-probe opt-in
+  `performance` (`enabled`, `repeat` = 5, `warmup` = 1, `max_ratio` = 2.0):
+  the probe runs warmup + timed repeats, the behavior capture comes from
+  the last run, and sorted durations + their median (ms) are stored in the
+  snapshot. At diff time a median ratio above `max_ratio` is
+  `runtime_regressed` — MEDIUM, UNCERTAIN (forces human review, can never
+  auto-BLOCK). Default off; budgets are ratios, never absolute
+  milliseconds; timing is machine-dependent and the baseline stays
+  machine-local. Eval case 24 (0.02s → 0.5s slowdown caught only by the
+  timing budget). Suite is now 24 cases.
+
 - **Selective regression analysis (V0.5).** `check --select` maps the
   changed-file set (git) onto each probe's tracked paths — command script
   files, `-m` module directories, watched files/dirs, the managed-server

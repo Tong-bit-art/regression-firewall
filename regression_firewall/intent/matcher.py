@@ -28,6 +28,7 @@ UNCERTAIN_CATEGORIES = {
     "db_query_count_changed",
     "db_table_written_added",
     "db_table_written_removed",
+    "runtime_regressed",
 }
 
 

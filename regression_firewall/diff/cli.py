@@ -173,7 +173,35 @@ def diff_cli(before: ProbeCapture, after: ProbeCapture, normalizer: Normalizer,
             config=config,
         ))
 
+    # -- opt-in runtime measurement (probe.performance) -----------------------
+
+    median_before = bd.get("runtime_median_ms")
+    median_after = ad.get("runtime_median_ms")
+    if median_before and median_after:
+        ratio = median_after / median_before
+        perf = (getattr(config, "cli", None) and _probe_performance(config, after.probe_id)) or {}
+        max_ratio = float(perf.get("max_ratio", 2.0))
+        if ratio > max_ratio:
+            changes.append(make_change(
+                "cli", after.target, "runtime_regressed",
+                before={"median_ms": median_before},
+                after={"median_ms": median_after},
+                evidence={"ratio": round(ratio, 3), "max_ratio": max_ratio,
+                          "runs_baseline": bd.get("runtime_runs"),
+                          "runs_check": ad.get("runtime_runs")},
+                description=(f"{after.target}: median runtime {median_before}ms -> "
+                             f"{median_after}ms ({ratio:.2f}x > {max_ratio}x budget)"),
+                config=config,
+            ))
+
     return changes
+
+
+def _probe_performance(config, probe_id: str) -> dict:
+    for probe in config.cli.probes:
+        if probe.id == probe_id and probe.performance:
+            return {"max_ratio": probe.performance.max_ratio}
+    return {}
 
 
 def _preview(value) -> str:

@@ -28,6 +28,22 @@ proves the old behavior still works.
 | **Fresh holdout V0.2** | **26/26 PASS** on tqdm/attrs/black (recall 100%, FPR 0%, verdict 100%) — `docs/FINAL_HOLDOUT_V02.md`; executed 2026-10-25, tool code 0.2.0 unchanged across all runs |
 | Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
 
+## V0.5 + V0.6 (shipped 2026-10-25, on main — unreleased)
+
+- **V0.5 `check --select`** — per-probe selective capture. `selection.py`
+  maps the changed-file set (git) onto each probe's tracked paths
+  (conservative; unknown deps always run); skipped probes are recorded in
+  `report.selection` ({surface:{probe:reason}}) and can never yield a
+  silent PASS (empty-capture guard forces REVIEW). run_capture grew
+  `only_probes` filtering; diff suppresses deliberate-absence warnings per
+  probe. Granularity limit: file-level mapping (sibling-file edits don't
+  select).
+- **V0.6 `probe.performance`** — opt-in timing budgets: warmup + timed
+  repeats, sorted durations + median (ms) in the snapshot, median-ratio
+  budget at diff time → `runtime_regressed` (MEDIUM/UNCERTAIN, never
+  auto-BLOCK). Default off. Traces accumulate over all runs consistently.
+- Suite at V0.6: 335 tests + 24/24 evals.
+
 ## V0.4 (shipped 2026-10-25, on main — unreleased)
 
 - **`trace.sqlite`** on CLI probes: stdlib sqlite3 query shapes + counts +

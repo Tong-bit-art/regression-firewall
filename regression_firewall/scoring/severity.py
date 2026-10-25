@@ -45,6 +45,7 @@ DEFAULT_SEVERITY = {
     ("cli", "db_query_count_changed"): "low",
     ("cli", "db_table_written_added"): "medium",
     ("cli", "db_table_written_removed"): "medium",
+    ("cli", "runtime_regressed"): "medium",
 }
 
 # Categories whose *detection* is value-level rather than structural, so a
@@ -56,6 +57,7 @@ VALUE_LEVEL_CATEGORIES = {
     "stderr_changed",
     "header_changed",
     "db_query_count_changed",
+    "runtime_regressed",
 }
 
 STATE_CATEGORIES = {"capture_error"}

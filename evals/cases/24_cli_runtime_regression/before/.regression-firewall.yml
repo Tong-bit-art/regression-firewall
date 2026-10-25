@@ -1,0 +1,18 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  public_api:
+    enabled: false
+  js_api:
+    enabled: false
+  cli:
+    enabled: true
+    probes:
+      - id: job
+        command: ["python", "job.py"]
+        performance:
+          enabled: true
+          repeat: 3
+          warmup: 1
+          max_ratio: 2.0

@@ -459,3 +459,24 @@ def test_trace_sqlite_flag_parses():
     assert cfg.cli.probes[0].trace.fs_writes is False
     # sqlite-only trace survives the all-false -> None collapse
     assert cfg.cli.probes[0].trace is not None
+
+
+def test_performance_config_parses_and_validates():
+    probe_raw = lambda perf: {"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"], "performance": perf},
+    ]}}}
+    cfg = parse_config(probe_raw(True))
+    perf = cfg.cli.probes[0].performance
+    assert perf.enabled and perf.repeat == 5 and perf.warmup == 1 and perf.max_ratio == 2.0
+    cfg = parse_config(probe_raw({"enabled": True, "repeat": 9, "max_ratio": 1.5}))
+    perf = cfg.cli.probes[0].performance
+    assert perf.repeat == 9 and perf.max_ratio == 1.5
+    # disabled -> None (section collapses)
+    assert parse_config(probe_raw({"enabled": False})).cli.probes[0].performance is None
+    assert parse_config(probe_raw(False)).cli.probes[0].performance is None
+    with pytest.raises(ConfigError, match="repeat must be >= 1"):
+        parse_config(probe_raw({"repeat": 0}))
+    with pytest.raises(ConfigError, match="max_ratio must be > 1.0"):
+        parse_config(probe_raw({"max_ratio": 1.0}))
+    with pytest.raises(ConfigError, match="unknown keys"):
+        parse_config(probe_raw({"budget": 2}))

@@ -1,0 +1,17 @@
+name: cli_runtime_regression
+surface: cli
+description: "job.py gets drastically slower (0.02s -> 0.5s); stdout and exit code stay identical, so only the opt-in timing budget catches it."
+mutations:
+    - file: job.py
+      find: |-
+        time.sleep(0.02)
+      replace: |-
+        time.sleep(0.5)
+expect:
+  changes:
+    - surface: cli
+      target: job
+      category: runtime_regressed
+      classification: uncertain
+      severity: medium
+  verdict: REVIEW

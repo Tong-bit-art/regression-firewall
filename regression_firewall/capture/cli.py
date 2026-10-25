@@ -5,9 +5,11 @@ import hashlib
 import json
 import os
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from ..config.schema import CliSurfaceConfig
@@ -195,29 +197,42 @@ def _run_probe(probe, project_root: Path) -> tuple:
             if trace.sqlite:
                 env["REGFW_TRACE_SQLITE"] = "1"
 
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=str(cwd),
-            env=env,
-            capture_output=True,
-            timeout=probe.timeout,
-        )
-    except subprocess.TimeoutExpired:
+    # Opt-in timing: warmup runs (untimed) then repeat timed runs; the
+    # captured behavior comes from the LAST run. Trace records accumulate
+    # over all runs on both sides, so trace counts stay comparable.
+    perf = getattr(probe, "performance", None)
+    total_runs = (perf.warmup + perf.repeat) if (perf and perf.enabled) else 1
+    timed_from = (perf.warmup + 1) if (perf and perf.enabled) else 1
+    durations_ms: list = []
+    completed = None
+    run_error = None
+    for index in range(total_runs):
+        started = time.perf_counter()
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=str(cwd),
+                env=env,
+                capture_output=True,
+                timeout=probe.timeout,
+            )
+        except subprocess.TimeoutExpired:
+            run_error = f"command timed out after {probe.timeout:g}s"
+            break
+        except FileNotFoundError:
+            run_error = f"command not found: {command[0]}"
+            break
+        except PermissionError:
+            run_error = f"command is not executable: {command[0]}"
+            break
+        if index + 1 >= timed_from:
+            durations_ms.append(round((time.perf_counter() - started) * 1000))
+
+    if run_error is not None:
         if trace_dir:
             shutil.rmtree(trace_dir, ignore_errors=True)
         return ProbeCapture(probe_id=probe.id, target=probe.id, ok=False,
-                            error=f"command timed out after {probe.timeout:g}s"), warnings
-    except FileNotFoundError:
-        if trace_dir:
-            shutil.rmtree(trace_dir, ignore_errors=True)
-        return ProbeCapture(probe_id=probe.id, target=probe.id, ok=False,
-                            error=f"command not found: {command[0]}"), warnings
-    except PermissionError:
-        if trace_dir:
-            shutil.rmtree(trace_dir, ignore_errors=True)
-        return ProbeCapture(probe_id=probe.id, target=probe.id, ok=False,
-                            error=f"command is not executable: {command[0]}"), warnings
+                            error=run_error), warnings
 
     fs_writes, env_reads, db_queries, db_tables = [], [], {}, []
     if trace_dir is not None:
@@ -255,6 +270,12 @@ def _run_probe(probe, project_root: Path) -> tuple:
         data["env_reads"] = env_reads
         data["db_queries"] = db_queries
         data["db_tables_written"] = db_tables
+    if perf and perf.enabled:
+        # sorted: the run ORDER is scheduling noise, the distribution is the
+        # signal; snapshots stay deterministic for identical behavior
+        data["runtime_ms"] = sorted(durations_ms)
+        data["runtime_median_ms"] = int(round(statistics.median(durations_ms))) if durations_ms else None
+        data["runtime_runs"] = len(durations_ms)
 
     return ProbeCapture(
         probe_id=probe.id,
