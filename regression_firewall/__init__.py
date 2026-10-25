@@ -4,7 +4,7 @@ Your tests prove the new code works. Regression Firewall proves the old
 behavior still works.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 SNAPSHOT_SCHEMA_VERSION = "1"
 REPORT_SCHEMA_VERSION = 1

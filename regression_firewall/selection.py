@@ -51,14 +51,13 @@ def decide_probes(config, project_root: Path, changed_files: list) -> list:
     for surface in SURFACES:
         for probe in _probes(config, surface):
             deps = probe_dependencies(surface, probe, config, project_root)
-            dep_rel = sorted(str(d.relative_to(project_root)).replace("\\", "/")
-                             for d in (deps or ()))
+            dep_rel = sorted(_rel_label(d, project_root) for d in (deps or ()))
             if deps is None:
                 decisions.append(ProbeDecision(
                     surface, probe.id, True,
                     "dependencies could not be mapped; capturing to be safe", []))
                 continue
-            touched = sorted({str(p.relative_to(project_root)).replace("\\", "/")
+            touched = sorted({_rel_label(p, project_root)
                               for p in changed if _under_any(p, deps)})
             if touched:
                 shown = ", ".join(touched[:5]) + (f" (+{len(touched) - 5} more)"
@@ -103,6 +102,11 @@ def _cli_probe_dependencies(probe, root: Path):
     probe_cwd = (root / probe.cwd).resolve()
     command = [_resolve_python(p) for p in probe.command]
     for i, token in enumerate(command):
+        # command[0] is the interpreter and absolute paths are environment
+        # (e.g. a venv python injected via {venv_python}) — neither is project
+        # code the change could live in
+        if i == 0 or _is_absolute(token):
+            continue
         candidate = probe_cwd / token
         if _looks_like_path(token) and candidate.exists():
             deps.add(candidate.resolve())
@@ -124,6 +128,8 @@ def _http_dependencies(cfg, root: Path):
     deps: set = set()
     server_cwd = (root / cfg.server.cwd).resolve()
     for i, token in enumerate(cfg.server.command):
+        if i == 0 or _is_absolute(token):
+            continue  # interpreter / environment paths are not project code
         candidate = server_cwd / _resolve_python(token)
         if _looks_like_path(token) and candidate.exists():
             deps.add(candidate.resolve())
@@ -173,6 +179,22 @@ def _module_dir(base: Path, module: str):
         if len(parts) > 1 and parent_pkg.with_suffix(".py").is_file():
             return parent_pkg.with_suffix(".py").resolve()
     return None
+
+
+def _is_absolute(token: str) -> bool:
+    if not token:
+        return False
+    return Path(token).is_absolute() or re.match(r"^[A-Za-z][:]", token) is not None
+
+
+def _rel_label(path: Path, root: Path) -> str:
+    """Project-relative posix label; out-of-project paths keep their
+    absolute form (defensive: environment paths must never crash the
+    selection, e.g. a venv interpreter in a probe command)."""
+    try:
+        return path.resolve().relative_to(Path(root).resolve()).as_posix()
+    except (ValueError, OSError):
+        return str(path).replace("\\", "/")
 
 
 def _looks_like_path(token: str) -> bool:

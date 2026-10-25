@@ -200,7 +200,7 @@ unrequested behavior change fails the check, with the full report in the
 job summary:
 
 ```yaml
-- uses: Tong-bit-art/regression-firewall@v0.3.0
+- uses: Tong-bit-art/regression-firewall@v0.4.0
   with:
     base-ref: ${{ github.event.pull_request.base.sha }}
     project-path: .
@@ -329,6 +329,16 @@ flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
 5 real regressions from open-source history. 2 detected; 3 require probe
 coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HISTORICAL_REGRESSIONS.md).
+
+### Fresh holdout (V0.4–V0.6 code, 2026-10-26)
+
+3 new repos: **datasette** (HTTP + CLI + sqlite tracing + runtime budget +
+`--select` in both directions), **pluggy** and **more-itertools** (public
+API `__all__` semantics). 23 cases: **recall 100%** (10/10), **FPR 0%**
+(13/13), severity and verdict accuracy 100%. The holdout caught and fixed
+one real V0.5 bug (selection crashed on venv-interpreter paths in probe
+commands). See [docs/FINAL_HOLDOUT_V04.md](docs/FINAL_HOLDOUT_V04.md).
+This corpus is now consumed; the next release cycle needs a fresh one.
 
 ### Fresh holdout (V0.3 code, 2026-10-25)
 

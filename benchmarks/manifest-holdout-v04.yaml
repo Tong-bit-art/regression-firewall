@@ -1,0 +1,151 @@
+# FRESH HOLDOUT V0.4 — frozen 2026-10-26, BEFORE its first run.
+# Frozen tool version: main @ 047d786 (V0.5 + V0.6 on top of v0.3.0; version
+# not yet bumped — this holdout gates the 0.4.0 release).
+#
+# Purpose: validate the V0.3–V0.6 feature set on real repositories never
+# used for development. Disjoint from all 17 previously used repos (flaskr,
+# flask, healthchecks, requests, click, argparse, typer, pip-tools, httpie,
+# sherlock, bottle, urllib3, packaging, tqdm, attrs, black, zod, isort,
+# dateutil).
+#
+# Surface coverage rationale (honest):
+# - datasette: HTTP surface (managed `datasette serve` with JSON probes on a
+#   deterministic database) + CLI surface + **V0.4 trace.sqlite** on the
+#   real `inspect` command + **V0.6 performance** budget (injected 2s sleep)
+#   + **V0.5 check --select** in both directions (package touch → probes
+#   must still RUN; untouched file → all probes skipped, empty-capture
+#   REVIEW floor asserted via skipped_probes_min).
+# - pluggy: public API surface (src layout) incl. the __all__-removal
+#   double change (symbol_removed + export_changed).
+# - more-itertools: public API surface (star-import + __all__ semantics).
+# - The js_api surface is NOT covered: no JS repo in this corpus (zod
+#   covered it in the V0.3 holdout); js_api code was unchanged since.
+#
+# Authoring validation performed BEFORE freezing (repo-side only): datasette
+# `inspect` output verified byte-identical across runs; sqlite trace caught
+# 10 real query shapes from datasette internals; HTTP endpoints /data.json
+# and /data/users.json verified deterministic; more-itertools and pluggy
+# __all__-removal mutations verified to cleanly remove the symbol from the
+# namespace (import survives).
+#
+# Run ONCE. If it exposes bugs, fix them and create a NEW fresh holdout —
+# never re-run this holdout after fixes (POST-FIX runs must be labeled).
+
+schema_version: 1
+python_version: "3.11"
+notes:
+- "FRESH HOLDOUT V0.4 — repos disjoint from all prior development/validation."
+- "Frozen tool: main @ 047d786 (post-V0.6). First run 2026-10-26, Windows 11, Python 3.11.9."
+- "No js_api surface (no JS repo; js_api unchanged since the V0.3 holdout)."
+- "SECURITY LIMITATION: no Docker; LocalExecutor with scrubbed env (see docs/BENCHMARK_DESIGN.md)."
+
+repos:
+- id: datasette
+  repo_url: https://github.com/simonw/datasette
+  commit_sha: a8e13cc489b41f2f9a5aa691f5eb1bedf99a0e0b
+  license: Apache-2.0
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  - - -c
+    - "import pathlib as _p, sqlite3 as _s; _d = _p.Path('bench_sample'); _d.mkdir(exist_ok=True); _c = _s.connect(str(_d / 'data.sqlite')); _c.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)'); _c.execute('DELETE FROM users'); _c.execute('INSERT INTO users(name) VALUES (?)', ('alice',)); _c.commit(); _c.close()"
+  verify_command: ["{venv_python}", "-m", "datasette", "--help"]
+  supported_surfaces: [http, cli]
+  known_requirements: "bench_sample/data.sqlite recreated by setup after each restore; serve probe needs the managed server ({port})"
+  probes:
+    version: 1
+    surfaces:
+      http:
+        enabled: true
+        server:
+          command: ["{venv_python}", "-m", "datasette", "serve", "bench_sample/data.sqlite", "--host", "127.0.0.1", "--port", "{port}"]
+        base_url: "http://127.0.0.1:{port}"
+        ready_path: "/data.json"
+        probes:
+        - id: "GET /data.json"
+          method: GET
+          path: /data.json
+        - id: "GET /data/users.json"
+          method: GET
+          path: /data/users.json
+      public_api: {enabled: false}
+      js_api: {enabled: false}
+      cli:
+        enabled: true
+        probes:
+        - id: inspect
+          command: ["{venv_python}", "-m", "datasette", "inspect", "bench_sample/data.sqlite"]
+          trace:
+            sqlite: true
+          performance:
+            enabled: true
+            repeat: 3
+            warmup: 1
+            max_ratio: 2.0
+        - id: help
+          command: ["{venv_python}", "-m", "datasette", "--help"]
+
+- id: pluggy
+  repo_url: https://github.com/pytest-dev/pluggy
+  commit_sha: ba2eaa2f76ce1882f34f9d1f4a47406bd985f633
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command: ["{venv_python}", "-c", "import pluggy; print(pluggy.__version__)"]
+  supported_surfaces: [public_api]
+  known_requirements: "no third-party dependencies"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      js_api: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: pluggy
+          module: pluggy
+
+- id: more-itertools
+  repo_url: https://github.com/more-itertools/more-itertools
+  commit_sha: 4aeb4338ae1407d8da9723e86da99efeb446f719
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command: ["{venv_python}", "-c", "import more_itertools; print(more_itertools.__version__)"]
+  supported_surfaces: [public_api]
+  known_requirements: "no third-party dependencies"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      js_api: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: more_itertools
+          module: more_itertools

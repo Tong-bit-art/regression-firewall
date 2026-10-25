@@ -1,0 +1,53 @@
+cases:
+- id: mi_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: mi_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: more_itertools/__init__.py
+    find: "__version__ = '11.2.1'"
+    replace: "__version__ = '11.2.1'  # benchmark comment"
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: mi_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: more_itertools/more.py
+    find: "    'chunked',\n"
+    replace: ''
+  expected:
+    changes:
+    - {surface: public_api, target: "more_itertools.chunked", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: mi_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: more_itertools/more.py
+    find: 'def chunked(iterable, n, strict=False):'
+    replace: 'def chunked(iterable, n, strict=False, *, key=None):'
+  expected:
+    changes:
+    - {surface: public_api, target: "more_itertools.chunked", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: mi_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: more_itertools/more.py
+    find: "def chunked(iterable, n, strict=False):"
+    replace: "def benchmark_added(x):\n    return x\n\n\ndef chunked(iterable, n, strict=False):"
+  - file: more_itertools/more.py
+    find: "    'chunked',\n"
+    replace: "    'benchmark_added',\n    'chunked',\n"
+  expected:
+    changes:
+    - {surface: public_api, target: "more_itertools.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS

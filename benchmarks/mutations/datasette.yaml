@@ -1,0 +1,86 @@
+cases:
+- id: ds_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: ds_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: datasette/cli.py
+    find: 'from .app import ('
+    replace: 'from .app import (  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: ds_10_exit_0_to_1
+  type: exit_0_to_1
+  edits:
+  - file: datasette/__main__.py
+    find: "from datasette.cli import cli\n\nif __name__ == \"__main__\":\n    cli()"
+    replace: "from datasette.cli import cli\n\nif __name__ == \"__main__\":\n    try:\n        cli()\n    except SystemExit as _e:\n        raise SystemExit(1 if _e.code in (0, None) else _e.code)"
+  expected:
+    changes:
+    - {surface: cli, target: inspect, category: exit_code_changed, classification: unexpected, severity: high}
+    - {surface: cli, target: help, category: exit_code_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: ds_11_stdout_changed
+  type: stdout_changed
+  edits:
+  - file: datasette/cli.py
+    find: 'Datasette is an open source multi-tool for exploring and publishing data'
+    replace: 'Datasette is an open source multi-tool for exploring, publishing and annotating data'
+  expected:
+    changes:
+    - {surface: cli, target: help, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: ds_sqlite_query_added
+  type: db_query_added
+  edits:
+  - file: datasette/cli.py
+    find: "async def inspect_(files, sqlite_extensions):\n    app = Datasette([], immutables=files, sqlite_extensions=sqlite_extensions)"
+    replace: "async def inspect_(files, sqlite_extensions):\n    import sqlite3 as _sq\n    _sq.connect(files[0]).execute(\"SELECT name FROM sqlite_master WHERE type='table'\")\n    app = Datasette([], immutables=files, sqlite_extensions=sqlite_extensions)"
+  expected:
+    changes:
+    - {surface: cli, target: inspect, category: db_query_added, classification: uncertain, severity: medium}
+    verdict: REVIEW
+
+- id: ds_perf_slowdown
+  type: runtime_regressed
+  edits:
+  - file: datasette/cli.py
+    find: "async def inspect_(files, sqlite_extensions):\n    app = Datasette([], immutables=files, sqlite_extensions=sqlite_extensions)"
+    replace: "async def inspect_(files, sqlite_extensions):\n    import time as _t\n    _t.sleep(2.0)\n    app = Datasette([], immutables=files, sqlite_extensions=sqlite_extensions)"
+  expected:
+    changes:
+    - {surface: cli, target: inspect, category: runtime_regressed, classification: uncertain, severity: medium}
+    verdict: REVIEW
+
+- id: ds_select_touch_package
+  type: stdout_changed
+  check_args: ["--select"]
+  edits:
+  - file: datasette/cli.py
+    find: 'Datasette is an open source multi-tool for exploring and publishing data'
+    replace: 'Datasette is an open source multi-tool for exploring, publishing and annotating data'
+  expected:
+    changes:
+    - {surface: cli, target: help, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: ds_select_untouched
+  type: no_change_control
+  check_args: ["--select"]
+  edits:
+  - file: README.md
+    find: 'multi-tool for exploring and publishing data'
+    replace: 'multi-tool for exploring, publishing and benchmarking data'
+  expected:
+    changes: []
+    skipped_probes_min: 4
+    verdict: REVIEW

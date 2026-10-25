@@ -102,6 +102,15 @@ def evaluate_case(case: dict, report: dict) -> CaseResult:
 
     missing = [f"{e.surface}/{e.category}/{e.classification}/{e.severity}"
                for e in unmatched]
+    selection_note = None
+    skipped_min = ground.get("skipped_probes_min")
+    if skipped_min is not None:
+        selection = report.get("selection") or {}
+        skipped_count = sum(len(ids) for ids in selection.values())
+        if skipped_count < int(skipped_min):
+            selection_note = (f"selection/skipped_probes={skipped_count} "
+                              f"< required {skipped_min}")
+            missing.append(selection_note)
     case_class = "BENCHMARK_PASS"
     if missing or false_positives or expected_verdict != detected_verdict:
         case_class = "REGRESSION_FIREWALL_FAILURE"

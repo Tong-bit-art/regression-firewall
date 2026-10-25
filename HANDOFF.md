@@ -28,6 +28,17 @@ proves the old behavior still works.
 | **Fresh holdout V0.2** | **26/26 PASS** on tqdm/attrs/black (recall 100%, FPR 0%, verdict 100%) — `docs/FINAL_HOLDOUT_V02.md`; executed 2026-10-25, tool code 0.2.0 unchanged across all runs |
 | Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
 
+## Holdout V0.4 + release 0.4.0 (2026-10-26)
+
+- **Fresh holdout** (datasette / pluggy / more-itertools, disjoint from all
+  17 prior repos): **23/23 PASS** — recall 100% (10/10), FPR 0% (13/13),
+  severity/verdict 100%. Caught one REAL V0.5 bug (selection crashed on
+  venv-interpreter paths in probe commands — fixed + regression tested);
+  benchmark infra gained `check_args` + `skipped_probes_min`.
+  `docs/FINAL_HOLDOUT_V04.md`. Corpus consumed (avoid all 20 used repos
+  next time).
+- **v0.4.0 tagged and released** via the automated workflow.
+
 ## V0.5 + V0.6 (shipped 2026-10-25, on main — unreleased)
 
 - **V0.5 `check --select`** — per-probe selective capture. `selection.py`
@@ -42,7 +53,7 @@ proves the old behavior still works.
   repeats, sorted durations + median (ms) in the snapshot, median-ratio
   budget at diff time → `runtime_regressed` (MEDIUM/UNCERTAIN, never
   auto-BLOCK). Default off. Traces accumulate over all runs consistently.
-- Suite at V0.6: 335 tests + 24/24 evals.
+- Suite at V0.6: 335 tests + 24/24 evals. At 0.4.0: 338 tests.
 
 ## V0.4 (shipped 2026-10-25, on main — unreleased)
 

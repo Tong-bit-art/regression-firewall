@@ -269,8 +269,9 @@ def run_case(venv_python: Path, project: Path, case: dict, executor,
         intent_path.write_text(json.dumps(case["intent"], indent=2) + "\n",
                                encoding="utf-8", newline="\n")
 
-    # 4. check
-    check = run_tool(venv_python, ["check"], project, executor, extra_env=env)
+    # 4. check (case-level extra args, e.g. ["--select"] for V0.5 validation)
+    check = run_tool(venv_python, ["check"] + list(case.get("check_args") or []),
+                     project, executor, extra_env=env)
     report = read_report(project)
     if check.timeout:
         return finish("TIMEOUT", "check timed out")

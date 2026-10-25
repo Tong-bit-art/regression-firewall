@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-26
+
+Behavior visibility everywhere: sqlite query tracing, selective capture,
+runtime budgets, and the official GitHub Action — validated by a fresh
+holdout (datasette / pluggy / more-itertools, 23/23).
+
 ### Added
 
 - **Performance regression budgets (V0.6).** Per-probe opt-in
