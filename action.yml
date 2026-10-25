@@ -130,7 +130,9 @@ runs:
         PROJECT="$REGFW_PROJECT_PATH"
         ARTIFACTS="$PROJECT/.regression-firewall"
         mkdir -p "$ARTIFACTS"
-        cp ".regfw-base/$ARTIFACTS/baseline.json" "$ARTIFACTS/baseline.json"
+        # this step runs inside .regfw-head; the baseline lives in the
+        # sibling base checkout — resolve it from the workspace root
+        cp "$GITHUB_WORKSPACE/.regfw-base/$ARTIFACTS/baseline.json" "$ARTIFACTS/baseline.json"
 
         INTENT_ARGS=()
         INTENT_FILE=".regfw-intent.json"
