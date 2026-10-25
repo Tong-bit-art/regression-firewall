@@ -1,0 +1,83 @@
+cases:
+- id: tqdm_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: tqdm_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: tqdm/__init__.py
+    find: 'from .cli import main  # TODO: remove in v5.0.0'
+    replace: 'from .cli import main  # TODO: remove in v5.0.0  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: tqdm_10_exit_0_to_1
+  type: exit_0_to_1
+  edits:
+  - file: tqdm/__main__.py
+    find: "from .cli import main\n\nmain()"
+    replace: "from .cli import main\n\ntry:\n    main()\nexcept SystemExit as _e:\n    raise SystemExit(1 if _e.code in (0, None) else _e.code)"
+  expected:
+    changes:
+    - {surface: cli, target: help, category: exit_code_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: tqdm_11_stdout_changed
+  type: stdout_changed
+  edits:
+  - file: tqdm/cli.py
+    find: '  -v, --version  Print version and exit.'
+    replace: '  -v, --version  Print version and quit.'
+  expected:
+    changes:
+    - {surface: cli, target: help, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: tqdm_12_stderr_introduced
+  type: stderr_introduced
+  edits:
+  - file: tqdm/__main__.py
+    find: 'from .cli import main'
+    replace: "import sys as _sys\nprint(\"benchmark: stderr line\", file=_sys.stderr)\nfrom .cli import main"
+  expected:
+    changes:
+    - {surface: cli, target: help, category: stderr_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: tqdm_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: tqdm/__init__.py
+    find: "    TqdmTypeError, TqdmWarning, tqdm, trange)"
+    replace: "    TqdmTypeError, TqdmWarning, tqdm)"
+  expected:
+    changes:
+    - {surface: public_api, target: "tqdm.trange", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: tqdm_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: tqdm/std.py
+    find: "def trange(*args, **kwargs):"
+    replace: "def trange(*args, timeout=None, **kwargs):"
+  expected:
+    changes:
+    - {surface: public_api, target: "tqdm.trange", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: tqdm_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: tqdm/__init__.py
+    find: "def tnrange(*args, **kwargs):  # pragma: no cover"
+    replace: "def benchmark_added(*args, **kwargs):\n    return 'added'\n\n\ndef tnrange(*args, **kwargs):  # pragma: no cover"
+  expected:
+    changes:
+    - {surface: public_api, target: "tqdm.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS

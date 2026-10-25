@@ -1,0 +1,138 @@
+# FRESH HOLDOUT V0.2 — frozen 2026-10-25, BEFORE its first run.
+# Frozen tool version: 0.2.0 (commit 09dbe56, "V0.2: OpenAPI import, custom
+# normalization rules, CLI dir watching, git diff hints").
+#
+# Purpose: validate V0.2 code on real repositories never used for
+# development, debugging, benchmark design, mutation design, or rule
+# adjustment. Disjoint from all 11 previously used repos (flaskr, flask,
+# healthchecks, requests, click, argparse, typer, pip-tools, httpie,
+# sherlock, bottle, urllib3, packaging).
+#
+# Surface coverage rationale (honest):
+# - tqdm  : CLI surface (exit/stdout/stderr) + public API.
+# - attrs : public API surface, standard src/ layout (re-validates the
+#           src-layout capture fix on a new repo).
+# - black : CLI surface with the V0.2 directory-watch path (dirs + ignore +
+#           setup-replayed generated sample), including file-content
+#           sensitivity to a formatter constant.
+# - HTTP surface is NOT covered by this holdout: V0.2 did not modify any
+#   HTTP capture or diff code (git diff v0.1.0..v0.2.0 shows
+#   capture/http_probe.py and diff/http.py untouched); HTTP detection was
+#   validated on the V0.1 corpus (flaskr, healthchecks). Recorded as a
+#   coverage note, not a pass claim.
+# - The V0.2 OpenAPI-import feature is not exercised here: none of these
+#   repos ships an OpenAPI document of its own; it is covered by unit,
+#   config-integration, and CLI tests.
+#
+# Run ONCE. If it exposes bugs, fix them and create a NEW fresh holdout —
+# never re-run this holdout after fixes (POST-FIX runs must be labeled).
+
+schema_version: 1
+python_version: "3.11"
+notes:
+- "FRESH HOLDOUT V0.2 — repos disjoint from all prior development/validation."
+- "Frozen tool: 0.2.0 @ 09dbe56. First run 2026-10-25, Windows 11, Python 3.11.9."
+- "No HTTP surface: V0.2 left HTTP capture/diff untouched (see header)."
+- "SECURITY LIMITATION: no Docker; LocalExecutor with scrubbed env (see docs/BENCHMARK_DESIGN.md)."
+
+repos:
+- id: tqdm
+  repo_url: https://github.com/tqdm/tqdm
+  commit_sha: 9cf5a12b1f955468a17f0ba3c59092b23e4258ac
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command: ["{venv_python}", "-c", "import tqdm; print(tqdm.__version__)"]
+  supported_surfaces: [cli, public_api]
+  known_requirements: "no third-party dependencies"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli:
+        enabled: true
+        probes:
+        - id: help
+          command: ["{venv_python}", "-m", "tqdm", "--help"]
+      public_api:
+        enabled: true
+        probes:
+        - id: tqdm
+          module: tqdm
+
+- id: attrs
+  repo_url: https://github.com/python-attrs/attrs
+  commit_sha: c8bb9bfaa2843e7844b5bb13bed4370b51feec4f
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  verify_command: ["{venv_python}", "-c", "import attr; print(attr.__version__)"]
+  supported_surfaces: [public_api]
+  known_requirements: "hatchling build backend (pip fetches build deps)"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      cli: {enabled: false}
+      public_api:
+        enabled: true
+        probes:
+        - id: attr
+          module: attr
+        - id: attr.converters
+          module: attr.converters
+
+- id: black
+  repo_url: https://github.com/psf/black
+  commit_sha: 80db630ac532f0e2f3ba33493e42cc19106eb261
+  license: MIT
+  python_version: "3.11"
+  split: holdout
+  project_root: .
+  # NOTE: no clean_excludes. bench_sample/ is intentionally NOT protected:
+  # `git clean -fdqx` must remove it (and anything a case generated inside
+  # it) so no state leaks across cases or runs; the -c setup command below
+  # recreates it fresh after every restore (setup reapply).
+  setup_commands:
+  - - -m
+    - pip
+    - install
+    - --quiet
+    - -e
+    - .
+  - - -c
+    - "import pathlib as _p; _d = _p.Path('bench_sample'); _d.mkdir(exist_ok=True); (_d / 'sloppy.py').write_text('\"\"\"Benchmark sample module.\"\"\"\\nimport os\\n\\n\\ndef compute(a, b):\\n    y = a + b\\n    return y\\n\\n\\nVALUES = transform_values(first_arg, second_arg, third_arg, fourth_arg, fifth_arg, sixth)\\n', encoding='utf-8')"
+  verify_command: ["{venv_python}", "-c", "import black; print(black.__version__)"]
+  supported_surfaces: [cli]
+  known_requirements: "click/mypy_extensions/pathspec/platformdirs installed transitively; bench_sample/ recreated by setup after each restore (clean-excluded)"
+  probes:
+    version: 1
+    surfaces:
+      http: {enabled: false}
+      public_api: {enabled: false}
+      cli:
+        enabled: true
+        probes:
+        - id: fmt
+          command: ["{venv_python}", "-m", "black", "-q", "bench_sample/sloppy.py"]
+          dirs:
+          - path: bench_sample
+            ignore: ["*.tmp"]
+        - id: version
+          command: ["{venv_python}", "-m", "black", "--version"]

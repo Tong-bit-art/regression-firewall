@@ -50,6 +50,12 @@ def load_manifest() -> dict:
 def build_wheel(workspace: Path) -> Path:
     dist = workspace / "dist"
     dist.mkdir(parents=True, exist_ok=True)
+    # A persistent workspace keeps old wheels across runs; a stale wheel must
+    # never be picked up as "the current build" (observed: a 0.1.0 wheel from
+    # a previous session silently won the glob and would have benchmarked the
+    # wrong tool version). Purge before building.
+    for stale_wheel in dist.glob("regression_firewall-*.whl"):
+        stale_wheel.unlink()
     # setuptools' build/ directory accumulates files across builds and does
     # NOT remove sources that were renamed/deleted — a stale build/lib/ would
     # resurrect dead modules into the wheel (observed with a module rename).

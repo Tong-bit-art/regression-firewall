@@ -30,6 +30,7 @@ class ExpectedEntry:
     classification: str = "unexpected"
     severity: str = "*"
     target: str = "*"
+    path: str = "*"  # generated-file changes (file_created/modified/deleted)
 
     def matches(self, change: dict) -> bool:
         if change.get("surface") != self.surface:
@@ -41,6 +42,8 @@ class ExpectedEntry:
         if self.classification not in ("*", change.get("classification")):
             return False
         if self.severity not in ("*", change.get("severity")):
+            return False
+        if self.path not in ("*", change.get("path")):
             return False
         return True
 

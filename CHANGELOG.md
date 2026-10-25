@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Fresh holdout on V0.2 code (2026-10-25).** New 3-repo corpus (tqdm,
+  attrs, black — CLI, public-API src-layout, and the V0.2 directory-watch
+  path), 26 cases: detection recall 100% (12/12), FPR 0% (14/14 controls),
+  severity and verdict accuracy 100%. Tool code unchanged across all runs;
+  every intermediate failure was benchmark authoring/infrastructure and is
+  documented in `docs/FINAL_HOLDOUT_V02.md`. Corpus consumed — the next
+  release cycle needs a fresh one.
+- Benchmark runner hardening found by the holdout: stale wheels in the
+  workspace dist/ are purged before building (a leftover wheel could
+  silently benchmark the wrong tool version); ground-truth entries support
+  a `path` field for generated-file cases (+ regression tests).
+
+### Fixed
+
+- Benchmark runner: `REGFW_BENCH_WORKSPACE` handling documented (ASCII-only;
+  Git Bash needs forward slashes — `C:/regfw-bench`, not `C:\\regfw-bench`).
+
 ## [0.2.0] - 2026-10-25
 
 Wider surface coverage: OpenAPI-derived probes, user-defined normalization,

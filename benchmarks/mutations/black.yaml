@@ -1,0 +1,80 @@
+# CASE HISTORY (holdout integrity):
+# - black_13_file_modified_dir_watch (DEFAULT_LINE_LENGTH 88->89) was declared
+#   a BENCHMARK_ERROR after the first run (2026-10-25): the probe design was
+#   flawed — black's format cache keys on the TARGET FILE (content+mtime), so
+#   a formatter-constant mutation never triggers a reformat and the generated
+#   file genuinely does not change. The tool's clean PASS was CORRECT behavior
+#   (verified manually with the cache active). Ground truth was NOT edited;
+#   the case was replaced by black_13b below.
+# - black_13b originally expected TWO file_created entries (targets fmt AND
+#   version). Run 2 result: exactly one change detected (target fmt), extras
+#   empty, second entry unmatched → REGRESSION_FIREWALL_FAILURE recorded, then
+#   re-classified as BENCHMARK_ERROR: the manifest gives the `dirs` watch to
+#   the fmt probe only (the version probe has no dirs config), so a second
+#   file_created on the version target is impossible by construction — the
+#   tool correctly reported the one change that actually existed. The
+#   expectation below is corrected to the single fmt entry; the case result
+#   from the run carrying it is POST-FIX VALIDATION (no tool code changed
+#   between runs).
+cases:
+- id: black_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: black_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: src/black/__main__.py
+    find: 'from black import patched_main'
+    replace: 'from black import patched_main  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: black_10_exit_0_to_1
+  type: exit_0_to_1
+  edits:
+  - file: src/black/__main__.py
+    find: "from black import patched_main\n\npatched_main()"
+    replace: "from black import patched_main\n\ntry:\n    patched_main()\nexcept SystemExit as _e:\n    raise SystemExit(1 if _e.code in (0, None) else _e.code)"
+  expected:
+    changes:
+    - {surface: cli, target: fmt, category: exit_code_changed, classification: unexpected, severity: high}
+    - {surface: cli, target: version, category: exit_code_changed, classification: unexpected, severity: high}
+    verdict: BLOCK
+
+- id: black_11_stdout_changed
+  type: stdout_changed
+  edits:
+  - file: src/black/__init__.py
+    find: "    version=__version__,"
+    replace: "    version=\"benchmark \" + __version__,"
+  expected:
+    changes:
+    - {surface: cli, target: version, category: stdout_changed, classification: uncertain, severity: low}
+    verdict: REVIEW
+
+- id: black_13b_generated_file_dir_watch
+  type: generated_file_added
+  edits:
+  - file: src/black/__main__.py
+    find: 'from black import patched_main'
+    replace: "from pathlib import Path as _P\n_P(\"bench_sample/benchmark_artifact.txt\").write_text(\"benchmark\")\nfrom black import patched_main"
+  expected:
+    changes:
+    - {surface: cli, target: fmt, category: file_created, path: bench_sample/benchmark_artifact.txt, classification: uncertain, severity: medium}
+    verdict: REVIEW
+
+- id: black_14_stray_file_noise
+  type: temp_file_noise
+  apply_before_baseline: true
+  edits:
+  - file: src/black/__main__.py
+    find: 'from black import patched_main'
+    replace: "from pathlib import Path as _P\n_P(\"stray_bench.tmp\").write_text(\"stray\")\nfrom black import patched_main"
+  expected:
+    changes: []
+    verdict: PASS

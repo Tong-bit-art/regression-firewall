@@ -290,13 +290,24 @@ flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 5 real regressions from open-source history. 2 detected; 3 require probe
 coverage the user must configure. See [docs/HISTORICAL_REGRESSIONS.md](docs/HISTORICAL_REGRESSIONS.md).
 
-### Fresh holdout (never used for development)
+### Fresh holdout (V0.2 code, 2026-10-25)
 
-3 new repos (bottle, urllib3, packaging). Run once on 2026-10-07; the run
+3 new repos never used in development (tqdm, attrs, black — CLI, public-API
+src-layout, and the V0.2 directory-watch path). 26 cases: **recall 100%**
+(12/12 planted regressions), **FPR 0%** (14/14 controls clean), severity and
+verdict accuracy 100%. The tool code was unchanged across all runs; every
+intermediate failure was a benchmark-authoring or infrastructure issue
+(formatter-cache-shielded probe, impossible expectation, state leak via
+clean-excludes — all documented). See
+[docs/FINAL_HOLDOUT_V02.md](docs/FINAL_HOLDOUT_V02.md). This corpus is now
+consumed; the next release cycle needs a fresh one.
+
+### Historical holdout (V0.1, consumed 2026-10-07)
+
+3 repos (bottle, urllib3, packaging). Run once on 2026-10-07; the run
 exposed benchmark and coverage issues that were fixed the same day.
-**Post-fix validation: 7/7 per repo** (3/3 planted regressions detected,
-0 false positives) — not a holdout result. See
-[docs/FINAL_HOLDOUT.md](docs/FINAL_HOLDOUT.md) and
+Post-fix validation: 7/7 per repo — labeled POST-FIX, not a holdout result.
+See [docs/FINAL_HOLDOUT.md](docs/FINAL_HOLDOUT.md) and
 [docs/FINAL_EVIDENCE_REPORT.md](docs/FINAL_EVIDENCE_REPORT.md).
 
 ### Independent agent validation (executed 2026-10-07)

@@ -1,0 +1,60 @@
+cases:
+- id: attrs_ctl_no_change
+  type: no_change_control
+  repeat: 3
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: attrs_ctl_non_behavior
+  type: non_behavior_change_control
+  edits:
+  - file: src/attr/__init__.py
+    find: '# SPDX-License-Identifier: MIT'
+    replace: '# SPDX-License-Identifier: MIT  # benchmark comment'
+  expected:
+    changes: []
+    verdict: PASS
+
+- id: attrs_15_symbol_removed
+  type: symbol_removed
+  edits:
+  - file: src/attr/__init__.py
+    find: "    Converter,\n    Factory,\n    _Nothing,"
+    replace: "    Converter,\n    _Nothing,"
+  expected:
+    changes:
+    - {surface: public_api, target: "attr.Factory", category: symbol_removed, classification: unexpected, severity: critical}
+    verdict: BLOCK
+
+- id: attrs_17_signature_changed
+  type: signature_changed
+  edits:
+  - file: src/attr/converters.py
+    find: "def optional(converter):"
+    replace: "def optional(converter, default=None):"
+  expected:
+    changes:
+    - {surface: public_api, target: "attr.converters.optional", category: signature_changed, classification: unexpected, severity: medium}
+    verdict: REVIEW
+
+- id: attrs_16_symbol_added
+  type: symbol_added
+  edits:
+  - file: src/attr/converters.py
+    find: "def optional(converter):"
+    replace: "def benchmark_added(value):\n    return value\n\n\ndef optional(converter):"
+  expected:
+    changes:
+    - {surface: public_api, target: "attr.converters.benchmark_added", category: symbol_added, classification: uncertain, severity: info}
+    verdict: PASS
+
+- id: attrs_18_implementation_only
+  type: implementation_only
+  edits:
+  - file: src/attr/converters.py
+    find: "        def optional_converter(val):"
+    replace: "        def optional_converter(val):\n            if False:\n                pass"
+  expected:
+    changes: []
+    verdict: PASS

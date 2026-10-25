@@ -21,9 +21,10 @@ proves the old behavior still works.
 
 | Suite | Result |
 |---|---|
-| pytest | **236 passed / 0 failed** |
+| pytest | **239 passed / 0 failed** (incl. benchmark-evaluator guards) |
 | Bundled evals | **21/21** (recall 100%, FPR 0%, verdict 100%) |
 | Real-world benchmark | 8 repos, 66 cases, 4 core bugs found & fixed (V0.1 code) |
+| **Fresh holdout V0.2** | **26/26 PASS** on tqdm/attrs/black (recall 100%, FPR 0%, verdict 100%) — `docs/FINAL_HOLDOUT_V02.md`; executed 2026-10-25, tool code 0.2.0 unchanged across all runs |
 | Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
 
 ## V0.2 (shipped 2026-10-25)
@@ -172,11 +173,13 @@ results must be labeled "POST-FIX VALIDATION", not "holdout".
 
 | Item | Priority | Status |
 |---|---|---|
-| New fresh holdout | HIGH (before the release AFTER v0.2.0, or a v0.2.x detection change) | The 2026-10-07 holdout corpus is consumed. V0.2 touched capture (cli dirs) and normalization (custom rules) — both are additive and covered by tests + eval case 21, but a real-repo benchmark run on V0.2 code has not happened yet. Select 3 NEW repos (never in the 11 used) before the next release cycle. |
+| New fresh holdout | HIGH (before the next release cycle) | **DONE for V0.2** (2026-10-25): tqdm/attrs/black, 26/26 PASS, zero tool bugs — `docs/FINAL_HOLDOUT_V02.md`. That corpus is now CONSUMED; the holdout after it must pick 3 repos disjoint from all 14 used so far (11 pre-V0.2 + tqdm + attrs + black). |
 | PyPI publication | MEDIUM | Everything is prepared: `publish.yml` (manual, OIDC Trusted Publisher) + `docs/RELEASE.md`. BLOCKED on the repo owner doing the one-time PyPI side: add the pending trusted publisher (owner=Tong-bit-art, repo=regression-firewall, workflow=publish.yml, env=pypi) and create the `pypi` environment in repo settings. Then tag a release and run the workflow. |
+| Benchmark-infra hardening done in holdout | — | `build_wheel` purges stale wheels; `ExpectedEntry` supports `path` (+ tests). Workspace lesson: never `clean_excludes` a dir the setup re-creates — state leaks across runs (documented in FINAL_HOLDOUT_V02). |
 | CI maintenance | LOW | **DONE 2026-10-25**: checkout@v5, setup-python@v6. |
 | typer.Typer signature: full fix | LOW | Canonical fingerprint works for most cases; edge cases with rich-conditional imports still UNSUPPORTED |
 | Cross-vendor agent validation on V0.2 | LOW | Independent agent validation ran on V0.1 (2026-10-07); repeat on V0.2 with a different vendor when convenient. |
+| V0.3 features | MEDIUM | JS/TS public API surface, better HTTP discovery, filesystem/env behavior (`docs/ROADMAP.md`). |
 
 ## Key Files to Read First
 
