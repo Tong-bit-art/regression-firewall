@@ -7,9 +7,11 @@ generated receipt — so an agent that changes any of them gets caught.
 
 import argparse
 import json
+import os
 import sys
+from pathlib import Path
 
-RECEIPT_PATH = "out/deploy_receipt.json"
+RECEIPT_PATH = Path("out") / "deploy_receipt.json"
 
 
 def main(argv=None):
@@ -24,6 +26,7 @@ def main(argv=None):
         return 0
 
     print("Deployment complete")
+    RECEIPT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(RECEIPT_PATH, "w") as handle:
         json.dump({"env": args.env, "result": "ok"}, handle)
     return 0

@@ -193,8 +193,12 @@ def _run_probe(probe, project_root: Path) -> tuple:
 
     data = {
         "exit_code": completed.returncode,
-        "stdout": completed.stdout.decode("utf-8", errors="replace"),
-        "stderr": completed.stderr.decode("utf-8", errors="replace"),
+        "stdout": _relativize_text(
+            completed.stdout.decode("utf-8", errors="replace"), cwd
+        ),
+        "stderr": _relativize_text(
+            completed.stderr.decode("utf-8", errors="replace"), cwd
+        ),
         "files": files,
     }
     if trace_dir is not None or (trace and (trace.fs_writes or trace.env_reads)):
@@ -209,6 +213,22 @@ def _run_probe(probe, project_root: Path) -> tuple:
         ok=True,
         data=data,
     ), warnings
+
+
+def _relativize_text(text: str, cwd: Path) -> str:
+    """Rewrite the probe's working directory to '.' inside captured output.
+
+    Tracebacks and logs often embed absolute paths. In CI the baseline and
+    the check run in two different checkout directories, so identical
+    behavior would otherwise diff on the directory name alone. Storing the
+    relative form keeps snapshots comparable and portable."""
+    try:
+        marker = str(cwd)
+    except Exception:  # pragma: no cover - cwd is always a Path
+        return text
+    if not marker or marker not in text:
+        return text
+    return text.replace(marker + "\\", "./").replace(marker + "/", "./").replace(marker, ".")
 
 
 def _read_trace(trace_path: Path, project_root: Path) -> tuple:

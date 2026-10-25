@@ -1,0 +1,208 @@
+name: "Regression Firewall"
+description: >
+  Behavioral regression safety layer for AI coding agents — run in CI to
+  verify a pull request did not change behavior nobody asked for. Checks out
+  the base ref, captures a behavior baseline, then re-captures on the head
+  ref, diffs, and turns the verdict into the job conclusion.
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  base-ref:
+    description: "Ref (SHA/branch/tag) to capture the behavior baseline against. Usually github.event.pull_request.base.sha."
+    required: true
+  head-ref:
+    description: "Ref to check against the baseline. Defaults to the ref that triggered the workflow."
+    required: false
+    default: ""
+  project-path:
+    description: "Path inside the repository that contains .regression-firewall.yml"
+    required: false
+    default: "."
+  intent-file:
+    description: "Path (relative to the repo root) of a committed intent.json. Optional: without intent, every behavior change is treated as unrequested."
+    required: false
+    default: ""
+  intent-json:
+    description: "Inline intent JSON (overrides intent-file when set)."
+    required: false
+    default: ""
+  fail-on:
+    description: "Which verdicts fail the job: 'block' (default) or 'review'."
+    required: false
+    default: "block"
+  python-version:
+    description: "Python version used to run the tool."
+    required: false
+    default: "3.12"
+  tool-install-command:
+    description: "Override how regression-firewall itself is installed (run from the repository root of the head checkout). Default: pip install from PyPI."
+    required: false
+    default: ""
+  version:
+    description: "regression-firewall version to install from PyPI (ignored when tool-install-command is set)."
+    required: false
+    default: ">=0.3.0"
+  install-command:
+    description: "Project dependency install command, run inside project-path of BOTH checkouts (e.g. 'pip install -r requirements.txt')."
+    required: false
+    default: ""
+  upload-artifacts:
+    description: "Upload report files as workflow artifacts ('true'/'false')."
+    required: false
+    default: "true"
+
+outputs:
+  verdict:
+    description: "PASS, REVIEW, or BLOCK"
+    value: ${{ steps.verdict.outputs.verdict }}
+  score:
+    description: "Risk score 0-100"
+    value: ${{ steps.verdict.outputs.score }}
+  report-path:
+    description: "Path of report.json in the workspace"
+    value: ${{ steps.check.outputs.report_path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out base ref
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ inputs.base-ref }}
+        path: .regfw-base
+        fetch-depth: 0
+
+    - name: Check out head ref
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ inputs.head-ref }}
+        path: .regfw-head
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install regression-firewall
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.tool-install-command }}" ]; then
+          cd .regfw-head
+          ${{ inputs.tool-install-command }}
+        else
+          pip install --quiet "regression-firewall${{ inputs.version }}"
+        fi
+        regression-firewall --version
+
+    - name: Install project dependencies (base)
+      if: ${{ inputs.install-command != '' }}
+      shell: bash
+      working-directory: .regfw-base/${{ inputs.project-path }}
+      run: ${{ inputs.install-command }}
+
+    - name: Install project dependencies (head)
+      if: ${{ inputs.install-command != '' }}
+      shell: bash
+      working-directory: .regfw-head/${{ inputs.project-path }}
+      run: ${{ inputs.install-command }}
+
+    - name: Capture baseline (base ref)
+      shell: bash
+      working-directory: .regfw-base/${{ inputs.project-path }}
+      run: |
+        set -euo pipefail
+        regression-firewall baseline
+
+    - name: Run check (head ref)
+      id: check
+      shell: bash
+      working-directory: .regfw-head
+      env:
+        REGFW_INTENT_FILE: ${{ inputs.intent-file }}
+        REGFW_INTENT_JSON: ${{ inputs.intent-json }}
+        REGFW_PROJECT_PATH: ${{ inputs.project-path }}
+      run: |
+        set -euo pipefail
+        PROJECT="$REGFW_PROJECT_PATH"
+        ARTIFACTS="$PROJECT/.regression-firewall"
+        mkdir -p "$ARTIFACTS"
+        cp ".regfw-base/$ARTIFACTS/baseline.json" "$ARTIFACTS/baseline.json"
+
+        INTENT_ARGS=()
+        INTENT_FILE=".regfw-intent.json"
+        if [ -n "$REGFW_INTENT_JSON" ]; then
+          printf '%s\n' "$REGFW_INTENT_JSON" > "$INTENT_FILE"
+          INTENT_ARGS=(--intent "$INTENT_FILE")
+        elif [ -n "$REGFW_INTENT_FILE" ]; then
+          INTENT_ARGS=(--intent "$REGFW_INTENT_FILE")
+        fi
+
+        set +e
+        (cd "$PROJECT" && regression-firewall check "${INTENT_ARGS[@]}")
+        EXIT_CODE=$?
+        set -e
+        echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+        echo "report_path=$PWD/$ARTIFACTS/report.json" >> "$GITHUB_OUTPUT"
+        exit "$EXIT_CODE"
+      # exit codes: 0 PASS, 1 REVIEW, 3 BLOCK, 2/70 tool error
+
+    - name: Determine verdict
+      id: verdict
+      if: always()
+      shell: bash
+      env:
+        REGFW_EXIT_CODE: ${{ steps.check.outputs.exit_code }}
+        REGFW_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -euo pipefail
+        case "$REGFW_EXIT_CODE" in
+          0) verdict=PASS ;;
+          1) verdict=REVIEW ;;
+          3) verdict=BLOCK ;;
+          *) verdict=ERROR ;;
+        esac
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        score=$(python -c "import json;print(json.load(open('${{ steps.check.outputs.report_path }}', encoding='utf-8'))['score'])" 2>/dev/null || echo "?")
+        echo "score=$score" >> "$GITHUB_OUTPUT"
+
+        if [ "$verdict" = "ERROR" ]; then
+          echo "::error::regression-firewall failed to run (exit code $REGFW_EXIT_CODE)"
+          exit 1
+        fi
+        if [ "$verdict" = "BLOCK" ]; then
+          echo "::error::Regression Firewall verdict BLOCK: unintended behavior change(s) detected. See the job summary and report artifacts."
+          [ "$REGFW_FAIL_ON" = "block" ] && exit 1 || true
+        elif [ "$verdict" = "REVIEW" ]; then
+          echo "::warning::Regression Firewall verdict REVIEW: changes need human review. See the job summary and report artifacts."
+          [ "$REGFW_FAIL_ON" = "review" ] && exit 1 || true
+        else
+          echo "Regression Firewall verdict PASS: no unintended behavior change detected."
+        fi
+
+    - name: Write job summary
+      if: always()
+      shell: bash
+      run: |
+        set -euo pipefail
+        REPORT=".regfw-head/${{ inputs.project-path }}/.regression-firewall/report.md"
+        if [ -f "$REPORT" ]; then
+          {
+            echo "## Regression Firewall report"
+            echo ""
+            cat "$REPORT"
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload report artifacts
+      if: always() && inputs.upload-artifacts == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-firewall-report
+        path: |
+          .regfw-head/${{ inputs.project-path }}/.regression-firewall/report.json
+          .regfw-head/${{ inputs.project-path }}/.regression-firewall/report.md
+        if-no-files-found: warn

@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Official GitHub Action (CI integration mode — V1.0 item pulled
+  forward).** Composite action (`action.yml`): checks out the PR base ref,
+  captures a fresh behavior baseline, runs `check` on the head ref, maps
+  PASS/REVIEW/BLOCK to job conclusions (`fail-on: block|review`), writes
+  the Markdown report to the job summary, and uploads report artifacts.
+  Inputs for project path, committed or inline intent, project dependency
+  install, and tool install override. Validated end-to-end by a dogfood
+  workflow (`.github/workflows/action-demo.yml`): a PASS job plus a BLOCK
+  job against the `ci/action-demo-block` fixture branch with a planted
+  exit-code regression. Two integration issues found and fixed during
+  local simulation: `examples/cli/deploy.py` crashed when `out/` was
+  missing, and absolute checkout paths embedded in CLI output produced
+  structural false positives across the two checkouts — the CLI capture
+  now rewrites the probe's working directory to `.` in stdout/stderr
+  (capture-time, deterministic, unit-tested).
+
 ## [0.3.0] - 2026-10-25
 
 Wider languages and behavior visibility: JS/TS public API surface,

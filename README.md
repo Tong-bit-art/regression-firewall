@@ -193,6 +193,25 @@ the agent's rules/instructions. The skill teaches the agent the workflow
 
 `check` exit codes for scripting: `0` PASS · `1` REVIEW · `3` BLOCK · `2` usage error · `70` runtime error.
 
+## Use it in CI
+
+The repository ships a composite GitHub Action — point it at a PR and an
+unrequested behavior change fails the check, with the full report in the
+job summary:
+
+```yaml
+- uses: Tong-bit-art/regression-firewall@v0.3.0
+  with:
+    base-ref: ${{ github.event.pull_request.base.sha }}
+    project-path: .
+    # intent-file: intent.json   # optional, committed by your agent
+    # fail-on: review            # default: only BLOCK fails
+    # install-command: pip install -r requirements.txt
+```
+
+See [docs/CI.md](docs/CI.md) for inputs, intent handling, and honesty
+notes (this repository dogfoods the action on its own examples).
+
 For the `public_api` surface, run the tool where your project's code is
 importable: introspection uses the interpreter that runs
 `regression-firewall`, so install it into the project's virtualenv (or run
@@ -409,7 +428,10 @@ correctly. Findings and caveats:
   Configuration-drift detection is covered by the existing `files:` watch
   plus trace read visibility; a dedicated mechanism was deliberately not
   built.
-- **V0.4** — database behavior (query counts, N+1 signals)
+- **V0.4+** — database behavior (query counts, N+1 signals); selective
+  regression analysis; opt-in performance regression. *(The V1.0
+  "CI integration mode" item was pulled forward and shipped as the
+  official GitHub Action — see [docs/CI.md](docs/CI.md).)*
 - **V0.5** — selective regression analysis (run only affected surfaces)
 - **V0.6** — opt-in performance regression
 

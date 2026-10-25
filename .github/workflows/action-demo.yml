@@ -1,0 +1,51 @@
+name: Action demo (dogfood)
+
+# End-to-end validation of the composite action in this repository's own CI:
+# job 1 must PASS on an unchanged example project; job 2 must BLOCK against
+# a fixture branch with a planted exit-code regression. A red run here means
+# the action itself is broken — treat it exactly like a test failure.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "action.yml"
+      - "examples/**"
+      - ".github/workflows/action-demo.yml"
+  pull_request:
+    paths:
+      - "action.yml"
+      - "examples/**"
+      - ".github/workflows/action-demo.yml"
+  workflow_dispatch:
+
+jobs:
+  pass-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run Regression Firewall action (expect PASS)
+        uses: ./
+        with:
+          base-ref: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
+          project-path: examples/cli
+          tool-install-command: pip install .
+
+  block-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run action against the planted-regression fixture (expect BLOCK)
+        id: fw
+        continue-on-error: true
+        uses: ./
+        with:
+          base-ref: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
+          head-ref: refs/heads/ci/action-demo-block
+          project-path: examples/cli
+          tool-install-command: pip install .
+      - name: Assert the BLOCK path works
+        if: steps.fw.outputs.verdict != 'BLOCK' || steps.fw.outcome != 'failure'
+        run: |
+          echo "expected verdict=BLOCK + failed step, got verdict=${{ steps.fw.outputs.verdict }} outcome=${{ steps.fw.outcome }}" >&2
+          exit 1

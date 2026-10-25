@@ -61,7 +61,10 @@ principles.
 ## V1.0 — Maturity
 
 - Stable snapshot format (v2 schema with migration tooling).
-- CI integration mode (GitHub Action / generic CLI mode with artifacts).
+- CI integration mode — **pulled forward, shipped 2026-10-25**: official
+  composite GitHub Action (`action.yml`) with verdict→job-conclusion
+  mapping, job-summary report, artifacts, intent inputs, and a dogfood
+  workflow (PASS + planted-regression BLOCK paths). See docs/CI.md.
 - Multi-agent support validation matrix (Claude Code, Codex, Cursor,
   OpenCode, Gemini CLI).
 - Plugin API for custom surfaces.
