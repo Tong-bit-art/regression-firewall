@@ -377,3 +377,74 @@ def test_cli_dirs_reject_bad_ignore():
 def test_cli_dirs_reject_unknown_keys():
     with pytest.raises(ConfigError, match="unknown keys"):
         parse_config(_cli_probe_raw([{"path": "out", "deep": True}]))
+
+
+# -- js_api surface + CLI trace --------------------------------------------------
+
+
+def test_js_api_surface_parses():
+    cfg = parse_config({"surfaces": {"js_api": {"probes": [
+        {"id": "entry", "file": "src/index.ts"},
+        {"file": "lib/main.js"},
+    ]}}})
+    assert cfg.js_api.enabled is True
+    assert cfg.js_api.probes[0].id == "entry"
+    assert cfg.js_api.probes[1].id == "lib/main.js"  # id defaults to file
+    assert cfg.js_api.probes[1].file == "lib/main.js"
+
+
+def test_js_api_surface_enabled_by_default():
+    cfg = parse_config({})
+    assert cfg.js_api.enabled is True
+    assert cfg.js_api.probes == []
+    assert "js_api" in cfg.enabled_surfaces()
+
+
+def test_js_api_probe_requires_file():
+    with pytest.raises(ConfigError, match="file is required"):
+        parse_config({"surfaces": {"js_api": {"probes": [{"id": "x"}]}}})
+
+
+def test_js_api_probe_rejects_unknown_keys():
+    with pytest.raises(ConfigError, match="unknown keys"):
+        parse_config({"surfaces": {"js_api": {"probes": [{"file": "a.js", "module": "x"}]}}})
+
+
+def test_trace_parses_bool_and_mapping():
+    probe_raw = lambda trace: {"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"], "trace": trace},
+    ]}}}
+    cfg = parse_config(probe_raw(True))
+    assert cfg.cli.probes[0].trace.fs_writes is True
+    assert cfg.cli.probes[0].trace.env_reads is True
+    cfg = parse_config(probe_raw({"fs_writes": True}))
+    assert cfg.cli.probes[0].trace.fs_writes is True
+    assert cfg.cli.probes[0].trace.env_reads is False
+    # both false → no trace section at all
+    assert parse_config(probe_raw({"fs_writes": False})).cli.probes[0].trace is None
+    assert parse_config(probe_raw(False)).cli.probes[0].trace is None
+    assert parse_config(probe_raw(None)).cli.probes[0].trace is None
+
+
+def test_trace_rejects_bad_values():
+    probe_raw = lambda trace: {"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"], "trace": trace},
+    ]}}}
+    with pytest.raises(ConfigError, match="must be a mapping or a boolean"):
+        parse_config(probe_raw("yes"))
+    with pytest.raises(ConfigError, match="unknown keys"):
+        parse_config(probe_raw({"reads": True}))
+    with pytest.raises(ConfigError, match="must be a boolean"):
+        parse_config(probe_raw({"fs_writes": "yes"}))
+
+
+def test_trace_in_config_hash():
+    from regression_firewall.config.loader import config_hash
+
+    with_trace = parse_config({"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"], "trace": {"fs_writes": True}},
+    ]}}})
+    without = parse_config({"surfaces": {"cli": {"probes": [
+        {"id": "j", "command": ["python", "j.py"]},
+    ]}}})
+    assert config_hash(with_trace) != config_hash(without)

@@ -15,11 +15,14 @@ behavior. It does not write code and does not replace tests.
 
 Run the workflow below whenever **all** of these hold:
 
-1. The task modifies existing behavior (HTTP endpoints, CLI commands, or a
-   Python package's public API) — not a greenfield project.
-2. A baseline can be captured before you edit (the code currently runs).
+1. The task modifies existing behavior (HTTP endpoints, CLI commands, a
+   Python package's public API, or a JS/TS package's exports) — not a
+   greenfield project.
+2. A baseline can be captured before you edit (the code currently runs, or
+   the entry file's exports can be parsed statically for `js_api`).
 3. The project has `.regression-firewall.yml` with probes — if not, and the
-   user agrees, run `regression-firewall init` and add probes first.
+   user agrees, run `regression-firewall init`, then `regression-firewall
+   discover --emit-probes` for HTTP apps, and add probes first.
 
 Do not run it for pure refactors with no observable behavior, docs-only
 changes, or new files with no existing consumers.

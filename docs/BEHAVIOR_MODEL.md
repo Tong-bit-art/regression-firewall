@@ -95,6 +95,34 @@ dunders excluded) are used. Submodules are listed from `__path__`. Signatures
 come from `inspect.signature` (unavailable ones recorded as such). Kinds:
 `function`, `class`, `module`, or the constant's type name.
 
+### Surface D — JS/TS API (static)
+
+Probe fields: `id`, `file` (project-relative entry file). Nothing executes:
+the file is parsed statically (`js_exports.py`), so this surface works even
+when the package cannot run in the capture environment.
+
+Capture payload (symbols dict, re-exports resolved to depth 3):
+
+```json
+{
+  "file": "src/index.ts",
+  "symbols": {
+    "createApp": {"kind": "function", "signature": "(name, options?)",
+                   "origin": "src/entry.ts"},
+    "default": {"kind": "default", "signature": null, "origin": "src/entry.ts"}
+  }
+}
+```
+
+Covered syntax: ESM `export function/class/const/let/var/interface/type/enum`,
+`export default`, alias lists (`export {a as b}`), CommonJS
+`exports.NAME` / `module.exports.NAME`, and relative re-exports
+(`export {x} from`, `export * from`, `export * as ns from`). Comments and
+string contents are stripped before matching. Deliberately NOT understood
+(invisible, never guessed): minified code, dynamic exports, destructured
+`export const {a} = ...`, bundler path aliases, object-literal
+`module.exports = {...}`, class members, `export =`.
+
 ## 3. Change object
 
 Every detected difference is one structured `Change`:
@@ -145,8 +173,17 @@ Every detected difference is one structured `Change`:
 | `file_created` | MEDIUM | UNCERTAIN |
 | `file_deleted` | HIGH | UNEXPECTED |
 | `file_modified` | MEDIUM | UNCERTAIN |
+| `fs_write_added` (trace) | MEDIUM | UNCERTAIN |
+| `fs_write_removed` (trace) | MEDIUM | UNCERTAIN |
+| `env_read_added` (trace) | LOW | UNCERTAIN |
+| `env_read_removed` (trace) | LOW | UNCERTAIN |
 | `capture_error` | HIGH | UNEXPECTED |
 
+Tracing (`trace.fs_writes` / `trace.env_reads`) is opt-in per probe and
+Python-only: a `sitecustomize.py` injected via PYTHONPATH records write
+paths and env-var NAMES (values never captured; `io.open` and `builtins.open`
+are both wrapped; `os.fdopen`-style fd writes are invisible). Write paths
+under the project root are stored project-relative.
 ### Public API
 
 | Category | Default severity | Classification when unmatched |
@@ -156,6 +193,16 @@ Every detected difference is one structured `Change`:
 | `signature_changed` | MEDIUM | UNEXPECTED |
 | `export_changed` (`__all__`) | MEDIUM | UNEXPECTED |
 | `capture_error` | HIGH | UNEXPECTED |
+
+### JS/TS API
+
+| Category | Default severity | Classification when unmatched |
+|---|---|---|
+| `symbol_removed` | CRITICAL | UNEXPECTED |
+| `symbol_added` | INFO | UNCERTAIN |
+| `signature_changed` | MEDIUM | UNEXPECTED |
+| `export_changed` (kind flip) | MEDIUM | UNEXPECTED |
+| `capture_error` (entry file missing) | HIGH | UNEXPECTED |
 
 Severities are overridable per category (or per `surface:category`) in config.
 The *unmatched* classification column is the deterministic default; the

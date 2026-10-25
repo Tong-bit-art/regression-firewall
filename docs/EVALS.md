@@ -35,7 +35,7 @@ HTTP cases use a dependency-free `http.server` app so the suite runs
 anywhere with no extra packages and no port conflicts (the server manager
 assigns a free port via `{port}` in `base_url`).
 
-## 2. Case list (V0.1 = 20 cases, V0.2 adds 21)
+## 2. Case list (V0.1 = 20, V0.2 adds 21, V0.3 adds 22)
 
 | # | Case | Planted change | Expected classification / severity | Verdict |
 |---|---|---|---|---|
@@ -60,6 +60,7 @@ assigns a free port via `{port}` in `base_url`).
 | 19 | `multiple_regressions` | HTTP status flip + field removed + CLI exit flip | 3 × UNEXPECTED / HIGH | BLOCK |
 | 20 | `no_regression` | none (deterministic output) | — | PASS |
 | 21 | `cli_dir_watch_created` (V0.2) | new file inside a watched directory; a `*.tmp` scratch file must stay ignored | UNCERTAIN / MEDIUM | REVIEW |
+| 22 | `cli_trace_fs_write` (V0.3) | traced probe starts writing an extra file; env-read of APP_TOKEN must stay invisible | UNCERTAIN / MEDIUM | REVIEW |
 
 ## 3. Metrics
 
@@ -87,18 +88,18 @@ wired into pytest (`tests/integration/test_evals.py`) and CI.
 
 ## 5. Current results
 
-Run at V0.2 (2026-10-25, Windows 11):
+Run at V0.3 (2026-10-25, Windows 11):
 
 | Metric | Value |
 |---|---|
-| Cases passed | 21 / 21 |
+| Cases passed | 22 / 22 |
 | Detection recall | 100% |
 | False-positive rate | 0% |
 | Severity accuracy | 100% |
 | Expected-change accuracy | 100% (cases 05, 18) |
 | Verdict accuracy | 100% |
 
-(V0.1 completion run: 20/20, same metrics, 2026-10-04.)
+(V0.1: 20/20 on 2026-10-04; V0.2: 21/21 on 2026-10-25 — same metrics.)
 
 Reproduce with `python -m evals.runner` (also wired into pytest and CI).
 Results land in `evals/results/summary.json`.

@@ -27,6 +27,23 @@ proves the old behavior still works.
 | **Fresh holdout V0.2** | **26/26 PASS** on tqdm/attrs/black (recall 100%, FPR 0%, verdict 100%) — `docs/FINAL_HOLDOUT_V02.md`; executed 2026-10-25, tool code 0.2.0 unchanged across all runs |
 | Independent agent validation | **10/10 tasks, 0 hard-rule violations** (DeepSeek V4 Pro / OpenCode, 2026-10-07, V0.1 code) |
 
+## V0.3 (shipped 2026-10-25, commit series on main)
+
+- **Convention-based HTTP discovery** — `discovery/appdetect.py` (static
+  scan, deterministic ranking) + `discover --emit-probes [MODULE:ATTR]`.
+- **JS/TS public API surface (`js_api`)** — `js_exports.py` (static export
+  extraction: ESM/CJS/alias lists/re-export resolution depth 3, comments+
+  strings stripped) + `capture/js_api.py` + `diff/js_api.py`. New surface in
+  config (`surfaces.js_api.probes[].file`), severity table, intent matcher.
+- **CLI behavior tracing** — `trace.fs_writes` / `trace.env_reads` per probe;
+  sitecustomize injected via PYTHONPATH (`capture/cli.py`,
+  SITECUSTOMIZE_SOURCE); io.open AND builtins.open both wrapped (pathlib
+  resolves io's binding); trace paths stored project-relative; env NAMES
+  only, never values; non-Python commands skip tracing with a warning.
+- Configuration-drift item deliberately closed by `files:` + tracing
+  (documented in ROADMAP).
+- Suite at V0.3: 294 tests + 22/22 evals (verify with `python -m pytest tests -q`).
+
 ## V0.2 (shipped 2026-10-25)
 
 - **OpenAPI import** — `surfaces.http.openapi` derives HTTP probes from an

@@ -56,6 +56,17 @@ def run_capture(config: Config, project_root: Path, artifacts_dir: Path) -> tupl
         else:
             warnings.append("surface 'public_api' is enabled but no probes are configured")
 
+    if config.js_api.enabled:
+        if config.js_api.probes:
+            from .js_api import capture_js_api_probes
+
+            surfaces["js_api"], js_warnings = capture_js_api_probes(
+                config.js_api, project_root
+            )
+            warnings.extend(js_warnings)
+        else:
+            warnings.append("surface 'js_api' is enabled but no probes are configured")
+
     # A probe that cannot run at all is not "no change": nothing was verified.
     # Surface it loudly here so it is visible at baseline time as well.
     for surface, captures in surfaces.items():

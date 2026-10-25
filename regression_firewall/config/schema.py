@@ -76,7 +76,35 @@ class CliProbeConfig:
     env: dict = field(default_factory=dict)
     files: list = field(default_factory=list)
     dirs: list = field(default_factory=list)  # list[DirWatchConfig]
+    trace: Optional["TraceConfig"] = None  # opt-in Python behavior tracing
     timeout: float = 60.0
+
+
+@dataclass
+class TraceConfig:
+    """Opt-in behavior tracing for a CLI probe (Python commands only).
+
+    Tracing works by injecting a sitecustomize.py via PYTHONPATH, so it
+    records only Python processes. fs_writes records paths the command
+    writes; env_reads records the NAMES of environment variables read
+    (never values)."""
+
+    fs_writes: bool = False
+    env_reads: bool = False
+
+
+@dataclass
+class JsApiProbeConfig:
+    """A static public-API probe for one JavaScript/TypeScript entry file."""
+
+    id: str = ""
+    file: str = ""  # project-relative path to the entry file
+
+
+@dataclass
+class JsApiSurfaceConfig:
+    enabled: bool = True
+    probes: list = field(default_factory=list)  # list[JsApiProbeConfig]
 
 
 @dataclass
@@ -170,6 +198,7 @@ class Config:
     http: HttpSurfaceConfig = field(default_factory=HttpSurfaceConfig)
     cli: CliSurfaceConfig = field(default_factory=CliSurfaceConfig)
     public_api: ApiSurfaceConfig = field(default_factory=ApiSurfaceConfig)
+    js_api: JsApiSurfaceConfig = field(default_factory=JsApiSurfaceConfig)
     ignore: IgnoreConfig = field(default_factory=IgnoreConfig)
     normalization: NormalizationConfig = field(default_factory=NormalizationConfig)
     redaction: RedactionConfig = field(default_factory=RedactionConfig)
@@ -185,6 +214,8 @@ class Config:
             out.append("cli")
         if self.public_api.enabled:
             out.append("public_api")
+        if self.js_api.enabled:
+            out.append("js_api")
         return out
 
     def canonical_dict(self) -> dict:
@@ -195,6 +226,7 @@ class Config:
                 "http": _strip_none(dataclasses.asdict(self.http)),
                 "cli": _strip_none(dataclasses.asdict(self.cli)),
                 "public_api": _strip_none(dataclasses.asdict(self.public_api)),
+                "js_api": _strip_none(dataclasses.asdict(self.js_api)),
             },
             "ignore": dataclasses.asdict(self.ignore),
             "normalization": dataclasses.asdict(self.normalization),
@@ -236,7 +268,7 @@ def parse_config(raw: dict, source: str = "<config>") -> Config:
     surfaces = raw.get("surfaces") or {}
     if not isinstance(surfaces, dict):
         raise ConfigError(f"{source}: 'surfaces' must be a mapping")
-    known_surfaces = {"http", "cli", "public_api"}
+    known_surfaces = {"http", "cli", "public_api", "js_api"}
     unknown_surfaces = sorted(set(surfaces) - known_surfaces)
     if unknown_surfaces:
         raise ConfigError(
@@ -246,6 +278,7 @@ def parse_config(raw: dict, source: str = "<config>") -> Config:
     cfg.http = _parse_http(surfaces.get("http"), source)
     cfg.cli = _parse_cli(surfaces.get("cli"), source)
     cfg.public_api = _parse_api(surfaces.get("public_api"), source)
+    cfg.js_api = _parse_js_api(surfaces.get("js_api"), source)
 
     cfg.ignore = _parse_section(
         raw.get("ignore"), IgnoreConfig, {"headers": "list", "json_paths": "list"}, "ignore", source
@@ -314,6 +347,9 @@ def _validate(cfg: Config, source: str) -> None:
     for probe in cfg.public_api.probes:
         if not probe.module:
             raise ConfigError(f"{source}: public_api probe {probe.id!r}: module is required")
+    for probe in cfg.js_api.probes:
+        if not probe.file:
+            raise ConfigError(f"{source}: js_api probe {probe.id!r}: file is required")
 
 
 def _parse_http(raw, source: str) -> HttpSurfaceConfig:
@@ -424,7 +460,7 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
     for i, probe_raw in enumerate(probes_raw):
         if not isinstance(probe_raw, dict):
             raise ConfigError(f"{source}: surfaces.cli.probes[{i}] must be a mapping")
-        known_probe = {"id", "command", "cwd", "env", "files", "dirs", "timeout"}
+        known_probe = {"id", "command", "cwd", "env", "files", "dirs", "trace", "timeout"}
         _check_keys(probe_raw, known_probe, f"surfaces.cli.probes[{i}]", source)
         command = _as_str_list(probe_raw.get("command", []), f"surfaces.cli.probes[{i}].command", source)
         probe = CliProbeConfig(
@@ -434,6 +470,7 @@ def _parse_cli(raw, source: str) -> CliSurfaceConfig:
             env=_as_str_map(probe_raw.get("env") or {}, f"surfaces.cli.probes[{i}].env", source),
             files=_as_str_list(probe_raw.get("files") or [], f"surfaces.cli.probes[{i}].files", source),
             dirs=_parse_dir_watches(probe_raw.get("dirs"), i, source),
+            trace=_parse_trace(probe_raw.get("trace"), i, source),
             timeout=_as_number(probe_raw.get("timeout", 60.0), f"surfaces.cli.probes[{i}].timeout", source),
         )
         cfg.probes.append(probe)
@@ -471,6 +508,52 @@ def _parse_dir_watches(raw, probe_index: int, source: str) -> list:
             )
         watches.append(DirWatchConfig(path=path, ignore=list(ignore), max_files=max_files))
     return watches
+
+
+def _parse_trace(raw, probe_index: int, source: str) -> TraceConfig | None:
+    if raw is None:
+        return None
+    where = f"surfaces.cli.probes[{probe_index}].trace"
+    if isinstance(raw, bool):
+        raw = {"fs_writes": raw, "env_reads": raw}
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{source}: {where} must be a mapping or a boolean")
+    _check_keys(raw, {"fs_writes", "env_reads"}, where, source)
+    trace = TraceConfig(
+        fs_writes=_as_bool(raw.get("fs_writes", False), f"{where}.fs_writes", source),
+        env_reads=_as_bool(raw.get("env_reads", False), f"{where}.env_reads", source),
+    )
+    if not trace.fs_writes and not trace.env_reads:
+        return None
+    return trace
+
+
+def _parse_js_api(raw, source: str) -> JsApiSurfaceConfig:
+    cfg = JsApiSurfaceConfig()
+    if raw is None:
+        return cfg
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{source}: surfaces.js_api must be a mapping")
+    known = {"enabled", "probes"}
+    _check_keys(raw, known, "surfaces.js_api", source)
+    cfg.enabled = _as_bool(raw.get("enabled", True), "surfaces.js_api.enabled", source)
+    probes_raw = raw.get("probes") or []
+    if not isinstance(probes_raw, list):
+        raise ConfigError(f"{source}: surfaces.js_api.probes must be a list")
+    for i, probe_raw in enumerate(probes_raw):
+        if not isinstance(probe_raw, dict):
+            raise ConfigError(f"{source}: surfaces.js_api.probes[{i}] must be a mapping")
+        known_probe = {"id", "file"}
+        _check_keys(probe_raw, known_probe, f"surfaces.js_api.probes[{i}]", source)
+        file_value = probe_raw.get("file", "")
+        cfg.probes.append(
+            JsApiProbeConfig(
+                id=_as_str(probe_raw.get("id") or file_value,
+                           f"surfaces.js_api.probes[{i}].id", source),
+                file=_as_str(file_value, f"surfaces.js_api.probes[{i}].file", source),
+            )
+        )
+    return cfg
 
 
 def _parse_api(raw, source: str) -> ApiSurfaceConfig:

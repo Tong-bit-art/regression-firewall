@@ -21,17 +21,26 @@ principles.
   need real design time (static parsing without a Node dependency; route
   extraction by convention) and did not fit the release.
 
-## V0.3 — Wider languages, environment behavior
+## V0.3 — Wider languages, environment behavior — SHIPPED 2026-10-25
 
-- [x] Better HTTP discovery (shipped 2026-10-25): FastAPI/Flask/Starlette
-      apps detected by convention (static scan, never imports project code
-      to detect); `discover --emit-probes` generates ready-to-paste probes
-      from an app's real routes; parameterized paths excluded with a note.
-- JavaScript / TypeScript public API surface (package exports, named
-  exports, default export) via static parsing.
-- Filesystem behavior surface (beyond watched files/dirs): read/write footprints.
-- Configuration drift detection (config files that code reads).
-- Environment variable read behavior for CLI probes.
+- [x] Better HTTP discovery: FastAPI/Flask/Starlette apps detected by
+      convention (static scan, never imports project code to detect);
+      `discover --emit-probes` generates ready-to-paste probes from an
+      app's real routes; parameterized paths excluded with a note.
+- [x] JavaScript / TypeScript public API surface: static, zero-dependency
+      export extraction (`js_exports.py`) covering ESM named/default
+      exports, alias lists, CommonJS `exports.NAME`, and relative
+      re-export resolution to depth 3 (`export {x} from`, `export * from`,
+      `export * as ns from`). New surface `js_api`; conservative scope
+      documented (no minified code, no dynamic exports, no bundler aliases).
+- [x] Filesystem & environment behavior: opt-in CLI probe tracing
+      (`trace.fs_writes` / `trace.env_reads`) via injected sitecustomize —
+      write paths and env-var NAMES (never values), Python commands only.
+      New categories: fs_write_added/removed (medium), env_read_added/
+      removed (low).
+- [x] Configuration drift: covered by the existing `files:` watch plus the
+      tracer's write visibility; a separate mechanism was deliberately not
+      built (would duplicate watching without adding a detectable category).
 
 ## V0.4 — Data behavior
 

@@ -1,0 +1,19 @@
+name: cli_trace_fs_write
+surface: cli
+description: "job.py starts writing an extra traced file; the env-read of APP_TOKEN and the stable writes must not create noise."
+mutations:
+    - file: job.py
+      find: |-
+        print("done")
+      replace: |-
+        (out / "extra.log").write_text("more")
+        print("done")
+expect:
+  changes:
+    - surface: cli
+      target: job
+      category: fs_write_added
+      path: "out/extra.log"
+      classification: uncertain
+      severity: medium
+  verdict: REVIEW

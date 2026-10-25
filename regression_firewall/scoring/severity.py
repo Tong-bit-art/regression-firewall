@@ -31,6 +31,15 @@ DEFAULT_SEVERITY = {
     ("public_api", "signature_changed"): "medium",
     ("public_api", "export_changed"): "medium",
     ("public_api", "capture_error"): "high",
+    ("js_api", "symbol_removed"): "critical",
+    ("js_api", "symbol_added"): "info",
+    ("js_api", "signature_changed"): "medium",
+    ("js_api", "export_changed"): "medium",
+    ("js_api", "capture_error"): "high",
+    ("cli", "fs_write_added"): "medium",
+    ("cli", "fs_write_removed"): "medium",
+    ("cli", "env_read_added"): "low",
+    ("cli", "env_read_removed"): "low",
 }
 
 # Categories whose *detection* is value-level rather than structural, so a

@@ -1,0 +1,16 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  public_api:
+    enabled: false
+  js_api:
+    enabled: false
+  cli:
+    enabled: true
+    probes:
+      - id: job
+        command: ["python", "job.py"]
+        trace:
+          fs_writes: true
+          env_reads: true

@@ -7,7 +7,7 @@ from ..models.snapshot import Snapshot
 from ..normalize.engine import Normalizer
 from .engine import diff_json, json_type, make_change
 
-SURFACE_ORDER = ("http", "cli", "public_api")
+SURFACE_ORDER = ("http", "cli", "public_api", "js_api")
 
 __all__ = ["diff_surfaces", "diff_json", "json_type", "make_change"]
 
@@ -17,6 +17,7 @@ def diff_surfaces(baseline: Snapshot, latest: Snapshot, normalizer: Normalizer,
     """Diff all surfaces. Returns (changes, warnings)."""
     from . import cli as cli_diff
     from . import http as http_diff
+    from . import js_api as js_diff
     from . import public_api as api_diff
 
     changes: list = []
@@ -37,6 +38,8 @@ def diff_surfaces(baseline: Snapshot, latest: Snapshot, normalizer: Normalizer,
                 changes.extend(http_diff.diff_http(before, after, normalizer, config, make_change))
             elif surface == "cli":
                 changes.extend(cli_diff.diff_cli(before, after, normalizer, config, make_change))
+            elif surface == "js_api":
+                changes.extend(js_diff.diff_js_api(before, after, config, make_change))
             else:
                 changes.extend(api_diff.diff_public_api(before, after, config, make_change))
         for probe_id in sorted(latest_map):

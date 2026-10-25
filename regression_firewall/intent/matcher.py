@@ -19,6 +19,10 @@ UNCERTAIN_CATEGORIES = {
     "symbol_added",
     "file_created",
     "file_modified",
+    "fs_write_added",
+    "fs_write_removed",
+    "env_read_added",
+    "env_read_removed",
 }
 
 

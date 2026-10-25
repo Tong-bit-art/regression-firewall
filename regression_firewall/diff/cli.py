@@ -86,6 +86,45 @@ def diff_cli(before: ProbeCapture, after: ProbeCapture, normalizer: Normalizer,
                     config=config,
                 ))
 
+    # -- traced behavior footprint (probe.trace; Python commands) ------------
+
+    # Write paths are normalized (temp dirs masked) before comparison; env
+    # var NAMES are compared raw — masking a name like API_TOKEN would
+    # destroy exactly the signal this category exists for.
+    fs_before = {normalizer.normalize_string(p) for p in (bd.get("fs_writes") or [])}
+    fs_after = {normalizer.normalize_string(p) for p in (ad.get("fs_writes") or [])}
+    for path in sorted(fs_before - fs_after):
+        changes.append(make_change(
+            "cli", after.target, "fs_write_removed", path=path,
+            before=path, after=MISSING,
+            description=f"{after.target}: no longer writes to '{path}'",
+            config=config,
+        ))
+    for path in sorted(fs_after - fs_before):
+        changes.append(make_change(
+            "cli", after.target, "fs_write_added", path=path,
+            before=MISSING, after=path,
+            description=f"{after.target}: now also writes to '{path}'",
+            config=config,
+        ))
+
+    env_before = set(bd.get("env_reads") or [])
+    env_after = set(ad.get("env_reads") or [])
+    for name in sorted(env_before - env_after):
+        changes.append(make_change(
+            "cli", after.target, "env_read_removed", path=name,
+            before=name, after=MISSING,
+            description=f"{after.target}: no longer reads environment variable '{name}'",
+            config=config,
+        ))
+    for name in sorted(env_after - env_before):
+        changes.append(make_change(
+            "cli", after.target, "env_read_added", path=name,
+            before=MISSING, after=name,
+            description=f"{after.target}: now reads environment variable '{name}'",
+            config=config,
+        ))
+
     return changes
 
 

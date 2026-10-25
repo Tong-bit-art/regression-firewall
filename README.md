@@ -55,13 +55,14 @@ not call the task complete.
 
 | Surface | Captures | Detects |
 |---|---|---|
-| **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE; probes can be derived from an OpenAPI 3.x document | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
-| **CLI** | stdout, stderr, exit code, watched files *and watched directories* | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory |
+| **HTTP** | status, headers, cookies, JSON body (structured), content-type — GET/POST/PUT/PATCH/DELETE; probes can be derived from an OpenAPI 3.x document or generated from real routes via `discover --emit-probes` | status flips, removed/added/retyped fields, payload shape, header and cookie changes |
+| **CLI** | stdout, stderr, exit code, watched files *and watched directories*; opt-in tracing of **filesystem writes** and **environment-variable reads** (names only; Python commands) | exit-code flips, output changes, new/deleted/modified files anywhere under a watched directory, new or vanished write targets, new or dropped env-var dependencies |
 | **Public API (Python)** | importable symbols, signatures, `__all__`, submodules | removed symbols (CRITICAL), signature changes, export changes |
+| **JS/TS API** | static extraction of ESM/CJS exports from entry files, incl. one-hop re-export resolution (`export {x} from`, `export * from`) — nothing is executed | removed exports (CRITICAL), new exports, signature/kind changes |
 | **Volatile data** | — | masked by built-in normalizers plus *your own* custom rules (regex + key hints) |
 
-Not (yet): JavaScript/TypeScript exports, database behavior, performance,
-browser UI, message queues. See [Roadmap](#roadmap).
+Not (yet): database behavior, performance, browser UI, message queues. See
+[Roadmap](#roadmap).
 
 ## Installation
 
@@ -233,6 +234,14 @@ surfaces:
           - path: out/
             ignore: ["*.tmp", "__pycache__"]
             max_files: 2000
+        trace:                      # opt-in behavior tracing (Python commands)
+          fs_writes: true           # record which paths the command writes
+          env_reads: true           # record which env var NAMES it reads
+
+  js_api:
+    probes:
+      - id: entry
+        file: src/index.ts          # static export extraction (ESM/CJS/re-exports)
 
 thresholds:
   review_score: 30        # REVIEW at or above this score
@@ -273,10 +282,10 @@ by configured probes. It cannot detect behavior that no probe covers.
 
 ### Bundled eval (synthetic)
 
-21 hand-built cases: status flips, removed fields, type changes, exit-code
+22 hand-built cases: status flips, removed fields, type changes, exit-code
 flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
-**21/21 passed.** See [docs/EVALS.md](docs/EVALS.md).
+**22/22 passed.** See [docs/EVALS.md](docs/EVALS.md).
 
 ### Validation corpus (real projects)
 
@@ -339,7 +348,17 @@ correctly. Findings and caveats:
   convention), and OpenAPI documents can derive a probe suite — but POST/PUT
   bodies are not invented, and parameterized paths need concrete values
   (list them yourself or use the OpenAPI import).
-- **Public API surface is Python only.** JS/TS exports are planned for V0.3.
+- **JS/TS API extraction is static and deliberately conservative.** It
+  parses ESM exports, `export default`, alias lists, CommonJS
+  `exports.NAME`, and re-exports (relative specifiers only, depth 3).
+  Minified code, dynamic exports, destructured `export const {a} = ...`,
+  bundler path aliases, object-literal `module.exports = {...}`, class
+  members, and `export =` syntax are not understood — a construct the
+  parser cannot see is invisible, not guessed at.
+- **Behavior tracing is Python-only** (a `sitecustomize.py` is injected via
+  PYTHONPATH). It records write *paths* and env-var *names*, never file
+  contents or env values. `os.fdopen`-style fd writes and non-Python child
+  processes are invisible.
 - **CLI watching is explicit.** Files and directories are watched because
   you listed them (`files` / `dirs`, with ignore globs and a per-dir
   `max_files` cap). Unknown files outside watched locations are not noticed.
@@ -370,9 +389,12 @@ correctly. Findings and caveats:
 
 - **V0.2** *(shipped 2026-10)* — OpenAPI import, custom normalization rules,
   CLI directory watching, git-diff hints in reports
-- **V0.3** *(in progress)* — ~~better HTTP discovery~~ *(shipped 2026-10:
-  convention-based app detection + `discover --emit-probes`)*; JS/TS public
-  API, filesystem & environment behavior
+- **V0.3** *(shipped 2026-10)* — convention-based HTTP discovery +
+  `discover --emit-probes`; JS/TS public API surface (static, zero-dep);
+  CLI behavior tracing (filesystem writes + env-var reads, Python only).
+  Configuration-drift detection is covered by the existing `files:` watch
+  plus trace read visibility; a dedicated mechanism was deliberately not
+  built.
 - **V0.4** — database behavior (query counts, N+1 signals)
 - **V0.5** — selective regression analysis (run only affected surfaces)
 - **V0.6** — opt-in performance regression

@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **JS/TS public API surface (`js_api`).** Static, zero-dependency export
+  extraction for entry files: ESM named exports (functions, classes,
+  consts/lets/vars incl. arrow signatures, interfaces, types, enums),
+  `export default` (with signature when the default is a named function),
+  alias lists, CommonJS `exports.NAME` / `module.exports.NAME`, and
+  relative re-export resolution to depth 3 with cycle guard
+  (`export {x as y} from`, `export * from`, `export * as ns from`).
+  Comments and string contents are stripped before matching so doc text
+  cannot invent exports. New categories mirror public_api:
+  symbol_removed (critical), symbol_added (info), signature_changed and
+  export_changed (medium), capture_error (high). Conservative scope is
+  documented — anything the parser cannot see is invisible, never guessed.
+- **CLI behavior tracing.** Per-probe opt-in `trace.fs_writes` /
+  `trace.env_reads` records which paths a probe command writes and which
+  environment-variable NAMES it reads (values never captured) by injecting
+  a sitecustomize.py via PYTHONPATH — Python commands only, stated loudly
+  when tracing is skipped. New categories: fs_write_added /
+  fs_write_removed (medium), env_read_added / env_read_removed (low); all
+  UNCERTAIN, so tracing findings drive REVIEW, never silent PASS or
+  outright BLOCK. Write paths under the project are stored project-relative
+  (portable snapshots).
+- **Configuration-drift detection decision.** Covered by the existing
+  `files:` watch plus the tracer's write visibility; a separate mechanism
+  was deliberately not built (documented in docs/ROADMAP.md).
 - **Convention-based HTTP app discovery (V0.3 first item).** `discover`
   lists FastAPI/Flask/Starlette app instances found by a static scan
   (imports nothing); `discover --emit-probes [MODULE:ATTR]` imports the app
@@ -17,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the OpenAPI import for concrete values. Detection never executes project
   code; only the explicitly chosen app is imported, exactly like a
   configured `discover_app`.
+- Eval case 22 (`cli_trace_fs_write`): traced write-target regression with
+  env-read noise control. Suite is now 22 cases.
 - **Fresh holdout on V0.2 code (2026-10-25).** New 3-repo corpus (tqdm,
   attrs, black — CLI, public-API src-layout, and the V0.2 directory-watch
   path), 26 cases: detection recall 100% (12/12), FPR 0% (14/14 controls),

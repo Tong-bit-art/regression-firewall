@@ -78,6 +78,12 @@ surfaces:
       # - id: mypackage
       #   module: mypackage
 
+  js_api:
+    enabled: true
+    probes: []
+      # - id: entry
+      #   file: src/index.ts   # static export extraction (ESM + re-exports)
+
 ignore:
   headers: [date, content-length]
   json_paths: []
@@ -288,6 +294,10 @@ def cmd_discover(args, root: Path) -> int:
         print(f"  Public API: {len(cfg.public_api.probes)} probe(s) configured")
         for probe in cfg.public_api.probes:
             print(f"    module {probe.module}")
+    if cfg.js_api.enabled:
+        print(f"  JS API: {len(cfg.js_api.probes)} probe(s) configured")
+        for probe in cfg.js_api.probes:
+            print(f"    file {probe.file}")
     return EXIT_OK
 
 
@@ -398,7 +408,7 @@ def cmd_baseline(args, root: Path) -> int:
     print("Regression Firewall — Baseline")
     print(f"  Project: {snapshot.project.get('name', '?')} ({snapshot.project.get('language', '?')})")
     print(f"  Probes captured: {snapshot.probe_count()}")
-    for surface in ("http", "cli", "public_api"):
+    for surface in ("http", "cli", "public_api", "js_api"):
         captures = snapshot.captures(surface)
         if captures:
             failed = sum(1 for c in captures if not c.ok)
@@ -786,7 +796,7 @@ def _changed_files_hint(baseline: Snapshot, latest: Snapshot, root: Path) -> lis
 def _unverified_probes(baseline: Snapshot, latest: Snapshot) -> list:
     """Probes that failed on BOTH sides: nothing was captured or compared."""
     unverified = []
-    for surface in ("http", "cli", "public_api"):
+    for surface in ("http", "cli", "public_api", "js_api"):
         before = baseline.capture_map(surface)
         after = latest.capture_map(surface)
         for probe_id in sorted(set(before) & set(after)):
