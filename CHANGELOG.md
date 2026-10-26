@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-26
+
+Onboarding and integration polish — no detection-semantics changes.
+
 ### Added
 
 - **Action PR comments.** `comment: true` (with `pr-number`) posts the full

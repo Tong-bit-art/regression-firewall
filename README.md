@@ -200,7 +200,7 @@ unrequested behavior change fails the check, with the full report in the
 job summary:
 
 ```yaml
-- uses: Tong-bit-art/regression-firewall@v0.4.0
+- uses: Tong-bit-art/regression-firewall@v0.4.1
   with:
     base-ref: ${{ github.event.pull_request.base.sha }}
     project-path: .
