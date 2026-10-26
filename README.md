@@ -135,7 +135,9 @@ regression-firewall check
 ```
 
 Working end-to-end examples live in [`examples/`](examples/) (FastAPI,
-Flask, a CLI tool, and a Python library).
+Flask, a CLI tool, and a Python library), and
+[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) is a complete real-output
+loop: init → baseline → a planted regression → BLOCK → intent.
 
 ## How it works
 
@@ -224,6 +226,7 @@ of the package — or fail.
 | Command | Purpose |
 |---|---|
 | `init` | Detect the project, scaffold `.regression-firewall.yml` |
+| `status` | One-screen orientation: config, baseline, last verdict, intent |
 | `discover` | Show detected language/framework and configured surfaces; lists FastAPI/Flask/Starlette app candidates found by convention |
 | `discover --emit-probes [MODULE:ATTR]` | Generate ready-to-paste HTTP probes from an app's **real routes** (spec defaults to the best auto-detected app); parameterized paths are excluded with a note |
 | `baseline` | Capture current behavior into `.regression-firewall/baseline.json` |

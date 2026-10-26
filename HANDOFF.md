@@ -298,3 +298,5 @@ environment=pypi) — **owner scheduled this for 2026-10-26**.
 8. `docs/RELEASE.md` — release + PyPI publishing
 9. `SKILL.md` — the agent workflow contract (baseline → intent → check)
 10. `docs/DEVELOPMENT_LOG.md` — bug history from the V0.1 era
+11. `docs/WALKTHROUGH.md` — a complete real-output loop (init → baseline
+    → planted regression → BLOCK → intent), good for onboarding users

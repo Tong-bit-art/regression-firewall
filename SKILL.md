@@ -149,7 +149,10 @@ Any config change must be disclosed in your final response.
 ## Quick reference
 
 ```bash
-regression-firewall init       # scaffold config (new projects)
+regression-firewall init       # scaffold config (new projects; auto-wires
+                               # detected apps and packages)
+regression-firewall status     # one-screen orientation: config, baseline,
+                               # last verdict, intent
 regression-firewall discover   # show detected surfaces and app candidates
 regression-firewall discover --emit-probes  # generate HTTP probes from real routes
 regression-firewall baseline   # capture before-behavior

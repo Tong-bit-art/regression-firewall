@@ -175,6 +175,11 @@ def main(argv=None) -> int:
              "the acknowledgement is recorded in the report's intent_audit)",
     )
 
+    subparsers.add_parser(
+        "status",
+        help="show the current setup: config, baseline, last verdict, intent",
+    )
+
     report_cmd = subparsers.add_parser("report", help="re-display the latest report")
     report_cmd.add_argument("--format", choices=("console", "markdown", "json"), default="console")
 
@@ -210,6 +215,7 @@ def main(argv=None) -> int:
         "discover": cmd_discover,
         "baseline": cmd_baseline,
         "check": cmd_check,
+        "status": cmd_status,
         "report": cmd_report,
         "explain": cmd_explain,
         "import-openapi": cmd_import_openapi,
@@ -818,6 +824,87 @@ def cmd_check(args, root: Path) -> int:
 
     print(render_console(result))
     return VERDICT_EXIT[verdict]
+
+
+def cmd_status(args, root: Path) -> int:
+    """One-screen orientation: what is configured, what has been captured,
+    what the last verdict was, and what intent is on file. Informational —
+    exit 0 unless something is structurally unreadable."""
+    cfg, warnings, config_path = load_config(root, args_config(args))
+    for warning in warnings:
+        print(f"note: {warning}")
+    artifacts = root / ARTIFACTS_DIR
+
+    from .discovery.project import detect_project
+
+    project = detect_project(root)
+    print("Regression Firewall — Status")
+    print(f"  Project: {project.name} ({project.summary()})")
+    if config_path is not None:
+        print(f"  Config:  {config_path.name}")
+        counts = []
+        for surface in ("http", "cli", "public_api", "js_api"):
+            section = getattr(cfg, surface, None)
+            if section and section.enabled:
+                counts.append(f"{surface} {len(section.probes)} probe(s)")
+        print(f"  Surfaces: {', '.join(counts) if counts else '(none enabled with probes)'}")
+    else:
+        print("  Config:  none (run 'regression-firewall init')")
+
+    baseline_path = artifacts / "baseline.json"
+    baseline = _read_snapshot_if_valid(baseline_path) if baseline_path.is_file() else None
+    if baseline is not None:
+        git = (baseline.provenance or {}).get("git") or {}
+        commit = str(git.get("git_commit") or "?")[:12]
+        integrity = "OK"
+        stored_hash = (baseline.provenance or {}).get("snapshot_hash")
+        if stored_hash and stored_hash != baseline.content_hash():
+            integrity = "MISMATCH (file may have been edited by hand)"
+        print(f"  Baseline: captured {baseline.created_at}, commit {commit}, "
+              f"{baseline.probe_count()} probe(s), integrity {integrity}")
+        rebaseline = (baseline.provenance or {}).get("rebaseline") or {}
+        if rebaseline.get("previous_verdict") in ("BLOCK", "REVIEW"):
+            print("  Baseline: WARNING — forced re-baseline after a "
+                  f"{rebaseline['previous_verdict']} check; treat checks with reduced trust")
+    else:
+        print(f"  Baseline: none ({'present but unreadable' if baseline_path.is_file() else 'run regression-firewall baseline'})")
+
+    intent_path = artifacts / INTENT_FILENAME
+    if intent_path.is_file():
+        try:
+            intent = load_intent(intent_path)
+            print(f"  Intent:  {len(intent.expected_changes)} declared change(s)"
+                  + (f" — {intent.task}" if intent.task else ""))
+        except IntentError as exc:
+            print(f"  Intent:  present but INVALID: {exc}")
+    else:
+        print("  Intent:  none on file (every detected change is treated as unrequested)")
+
+    report_path = artifacts / "report.json"
+    if report_path.is_file():
+        try:
+            report = _read_json(report_path)
+            summary = report.get("summary") or {}
+            print(f"  Last check: {report.get('verdict')} "
+                  f"(score {report.get('score')}/100) at {report.get('created_at')}")
+            print(f"    changes: {summary.get('expected', 0)} expected, "
+                  f"{summary.get('unexpected', 0)} unexpected, "
+                  f"{summary.get('uncertain', 0)} uncertain")
+            if report.get("baseline_trust_warning"):
+                print("    note: carries a BASELINE TRUST WARNING")
+            if report.get("selection"):
+                skipped = sum(len(v) for v in report["selection"].values())
+                print(f"    selective mode: {skipped} probe(s) were skipped")
+        except (OSError, json.JSONDecodeError, KeyError) as exc:
+            print(f"  Last check: report unreadable ({exc})")
+    else:
+        print("  Last check: none (run regression-firewall check)")
+
+    journal = artifacts / "intent_audit.jsonl"
+    if journal.is_file():
+        lines = sum(1 for _ in journal.open(encoding="utf-8", errors="replace"))
+        print(f"  Audit journal: {lines} event(s)")
+    return EXIT_OK
 
 
 def cmd_report(args, root: Path) -> int:
