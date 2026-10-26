@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 0.1.x | ✅ |
+| 0.4.x | ✅ |
+| < 0.4 | ❌ (upgrade; the anti-gaming guards have been strengthened since) |
 
 ## Reporting a vulnerability
 

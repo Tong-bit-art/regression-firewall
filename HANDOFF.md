@@ -240,6 +240,8 @@ benchmarks/
 - Action check-step gotcha (fixed once, do not regress): the step runs with
   `working-directory: .regfw-head`, so the baseline must be copied from
   `$GITHUB_WORKSPACE/.regfw-base/...`, not a sibling-relative path.
+- All four examples are verified end-to-end (baseline + check clean) by
+  `.github/workflows/examples.yml` on every change to examples/ or the tool.
 
 ## Release Process
 

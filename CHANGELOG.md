@@ -16,6 +16,9 @@ Orientation and documentation polish — no detection-semantics changes.
   surfaces with probe counts, baseline (capture time, commit, integrity
   check, re-baseline warning), intent on file, last verdict/score/summary,
   audit-journal size. Informational (exit 0).
+- **Examples CI** (`.github/workflows/examples.yml`): every example runs
+  `baseline` + `check` against the built tool on each change — the
+  documentation examples cannot drift.
 - **docs/WALKTHROUGH.md**: a complete real-output loop (init auto-config →
   baseline → planted regression → BLOCK → explain → status → intent with
   post-hoc acceptance), produced by the actual tool.

@@ -1,0 +1,53 @@
+name: Examples
+
+# Every example in examples/ must actually run: baseline + check clean with
+# the released wheel. Keeps the documentation examples from drifting.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "regression_firewall/**"
+      - ".github/workflows/examples.yml"
+  pull_request:
+    paths:
+      - "examples/**"
+      - "regression_firewall/**"
+      - ".github/workflows/examples.yml"
+  workflow_dispatch:
+
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - example: fastapi
+            deps: "fastapi uvicorn"
+          - example: flask
+            deps: "flask"
+          - example: cli
+            deps: ""
+          - example: python-library
+            deps: ""
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install the tool and the example's dependencies
+        run: |
+          pip install .
+          cd examples/${{ matrix.example }}
+          if [ -n "${{ matrix.deps }}" ]; then pip install ${{ matrix.deps }}; fi
+
+      - name: baseline + check must be clean
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          regression-firewall baseline
+          regression-firewall check
