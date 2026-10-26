@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-27
+
+Orientation and documentation polish — no detection-semantics changes.
+
+### Added
+
+- **`regression-firewall status`**: one-screen orientation — config,
+  surfaces with probe counts, baseline (capture time, commit, integrity
+  check, re-baseline warning), intent on file, last verdict/score/summary,
+  audit-journal size. Informational (exit 0).
+- **docs/WALKTHROUGH.md**: a complete real-output loop (init auto-config →
+  baseline → planted regression → BLOCK → explain → status → intent with
+  post-hoc acceptance), produced by the actual tool.
+
 ## [0.4.1] - 2026-10-26
 
 Onboarding and integration polish — no detection-semantics changes.
