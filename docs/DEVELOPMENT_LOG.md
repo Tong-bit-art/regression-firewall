@@ -3,6 +3,55 @@
 Format: reverse-chronological entries; architecture decisions live in
 `ARCHITECTURE.md` (D1–D5) and are referenced, not duplicated.
 
+## 2026-10-25 → 2026-10-27 — V0.2–V0.6 Development and Holdout Campaign
+
+Four feature phases (V0.2–V0.6), the GitHub Action, and four holdout runs.
+Full run ledgers live in `docs/FINAL_HOLDOUT_V02/V03/V04.md`; the bugs that
+reached the tool are summarized here.
+
+**Real tool bugs found by the holdout campaign (all fixed + regression-tested):**
+
+- **V0.5 selection crashed on environment paths** (V0.4 holdout, 2026-10-26):
+  probe commands rendered with `{venv_python}` put an absolute interpreter
+  path outside the project into the dependency set; `relative_to(project_root)`
+  raised and the whole check died without a report. Fix: the interpreter token
+  and absolute tokens are no longer project dependencies; out-of-project
+  dependency labels keep their absolute form.
+- **jsonl post-hoc journal** (V0.1 closure, listed for completeness): see the
+  2026-10-07 entry below.
+
+**Benchmark infrastructure bugs (fixed, tested where applicable):**
+
+- A stale wheel from a previous session won the runner's dist glob and would
+  have benchmarked the wrong tool version → the runner now purges
+  `dist/*.whl` before building.
+- The evaluator's `ExpectedEntry` lacked the `path` field → crash on
+  generated-file ground truth; now supported (matching semantics mirror the
+  eval runner).
+- `clean_excludes` on a directory the setup re-creates leaks generated state
+  across cases and runs → never exclude what setup re-applies.
+- Third-party formatter caches (black keys on the target file's mtime+hash)
+  shield constant-mutation probes → case revoked, not patched around.
+
+**Authoring lessons that recur (each cost a run):**
+
+- Ground truth may only expect what the probe config can produce (a `dirs`
+  watch belongs to specific probes; `__all__`-less packages yield
+  single-entry symbol expectations; subcommand option help is not in
+  top-level `--help` output).
+- Exit-code wrap mutations only flip probes whose entry point RAISES
+  SystemExit (black/datasette: yes; isort's `main()`: returns normally).
+- TypeScript barrels need `.js`→`.ts` specifier mapping, generic clauses,
+  type-annotated consts, and `type` modifiers in named lists — all found by
+  running the real parser against the real repo BEFORE freezing the corpus.
+
+**CI platform findings:**
+
+- macOS runner `getfqdn` reverse-DNS hang applies to third-party servers
+  too (werkzeug's `server_bind`) — such e2e tests skip on darwin.
+- `macos-latest` jobs occasionally get CANCELLED by runner reclamation (no
+  logs); rerun failed jobs before assuming a code failure.
+
 ## 2026-10-07 — V0.1 Release Blocker Closure
 
 Scope: close the known issues affecting V0.1 beta credibility. No new

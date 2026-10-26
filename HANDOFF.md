@@ -259,7 +259,7 @@ environment=pypi) — **owner scheduled this for 2026-10-26**.
 | New fresh holdout | before NEXT release | avoid all 20 consumed repos; corpus ideas: an ORM-backed CLI (exercises sqlite limits honestly), a FastAPI app repo (HTTP), a JS repo if js_api changes |
 | Cross-vendor agent validation on v0.4 | LOW | 2026-10-07 run was DeepSeek on V0.1 code; needs an external agent vendor |
 | Snapshot schema v2 + migration | DEFERRED | format is unchanged since v0.1; no driving need (speculative abstraction) |
-| Plugin API for custom surfaces | DEFERRED | no consumer evidence yet |
+| Plugin API for custom surfaces | DEFERRED (design written) | no consumer evidence yet; implementation path now written in `docs/PLUGIN_API_PROPOSAL.md` — phase 1 (internal Surface protocol refactor) is the shippable first step |
 | Multi-agent validation matrix | DEFERRED | requires external vendors |
 | Per-release metric publishing | DONE 2026-10-26 | release.yml runs pytest+evals as a release gate and attaches `summary.json` + a metrics table to every GitHub Release |
 | Action PR comments | DONE 2026-10-26 | `comment: true` posts/updates a marker-matched PR comment with the full report; dogfood pass-path validates it on PRs |

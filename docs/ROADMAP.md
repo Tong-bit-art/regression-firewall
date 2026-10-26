@@ -86,7 +86,9 @@ principles.
   workflow (PASS + planted-regression BLOCK paths). See docs/CI.md.
 - Multi-agent support validation matrix (Claude Code, Codex, Cursor,
   OpenCode, Gemini CLI).
-- Plugin API for custom surfaces.
+- Plugin API for custom surfaces — design proposal written
+  (`docs/PLUGIN_API_PROPOSAL.md`); recommended first step is an internal
+  Surface-protocol refactor of the four built-ins, which can ship alone.
 - Eval benchmark publishing (per-release detection metrics).
 
 ## Explicitly rejected for any version
