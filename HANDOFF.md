@@ -179,6 +179,9 @@ Cross-platform:
 13. PowerShell does not expand globs → `shell: bash` on Windows CI steps.
 14. macOS runner VMs: ~35s `socket.getfqdn()` reverse-DNS hang blocks
     `HTTPServer.server_bind` — fixture servers override `server_bind`.
+    Third-party servers (e.g. managed `flask run` = werkzeug) cannot be
+    patched from the tool; managed-server e2e tests that launch them are
+    `skipif(sys.platform == "darwin")` (see test_init_autoconfig.py).
 15. HTTP probes bypass proxies via `ProxyHandler({})` (local Clash :7890).
 16. setuptools `build/` accumulates stale files — the runner and release
     flow clean before building; **the benchmark runner also purges stale
