@@ -1,0 +1,17 @@
+name: js_api_symbol_removed
+surface: js_api
+description: "a re-exported function is renamed in the leaf module; the barrel probe must report the removal as CRITICAL/BLOCK."
+mutations:
+    - file: src/core.ts
+      find: |-
+        export function createSession(user: string, ttl = 3600): string {
+      replace: |-
+        function createSession(user: string, ttl = 3600): string {
+expect:
+  changes:
+    - surface: js_api
+      target: "src/index.ts:createSession"
+      category: symbol_removed
+      classification: unexpected
+      severity: critical
+  verdict: BLOCK

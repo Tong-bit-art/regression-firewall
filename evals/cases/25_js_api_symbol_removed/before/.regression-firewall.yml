@@ -1,0 +1,13 @@
+version: 1
+surfaces:
+  http:
+    enabled: false
+  cli:
+    enabled: false
+  public_api:
+    enabled: false
+  js_api:
+    enabled: true
+    probes:
+      - id: pkg
+        file: src/index.ts

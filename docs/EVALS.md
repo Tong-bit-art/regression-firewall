@@ -35,7 +35,7 @@ HTTP cases use a dependency-free `http.server` app so the suite runs
 anywhere with no extra packages and no port conflicts (the server manager
 assigns a free port via `{port}` in `base_url`).
 
-## 2. Case list (V0.1 = 20; V0.2–V0.6 add 21–24)
+## 2. Case list (V0.1 = 20; V0.2–V0.6 add 21–24, 0.4.1 adds 25)
 
 | # | Case | Planted change | Expected classification / severity | Verdict |
 |---|---|---|---|---|
@@ -63,6 +63,7 @@ assigns a free port via `{port}` in `base_url`).
 | 22 | `cli_trace_fs_write` (V0.3) | traced probe starts writing an extra file; env-read of APP_TOKEN must stay invisible | UNCERTAIN / MEDIUM | REVIEW |
 | 23 | `cli_trace_sqlite_count` (V0.4) | an existing query starts running a different number of times (N+1-style count signal); shape and table sets unchanged | UNCERTAIN / LOW | REVIEW |
 | 24 | `cli_runtime_regression` (V0.6) | job gets drastically slower (0.02s → 0.5s) with identical stdout/exit — only the opt-in timing budget catches it | UNCERTAIN / MEDIUM | REVIEW |
+| 25 | `js_api_symbol_removed` (0.4.1) | a re-exported function is renamed in the leaf module; the barrel probe reports the removal | UNEXPECTED / CRITICAL | BLOCK |
 
 ## 3. Metrics
 
@@ -90,11 +91,11 @@ wired into pytest (`tests/integration/test_evals.py`) and CI.
 
 ## 5. Current results
 
-Run at V0.6 (2026-10-25, Windows 11):
+Run at 0.4.1 (2026-10-26, Windows 11):
 
 | Metric | Value |
 |---|---|
-| Cases passed | 24 / 24 |
+| Cases passed | 25 / 25 |
 | Detection recall | 100% |
 | False-positive rate | 0% |
 | Severity accuracy | 100% |

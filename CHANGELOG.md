@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Action PR comments.** `comment: true` (with `pr-number`) posts the full
+  Markdown report as a pull-request comment and keeps the same comment
+  updated on later runs (marker-matched, no spam). Requires
+  `pull-requests: write`; the dogfood workflow validates it on PRs.
+- **`init` auto-configuration.** For projects with a detectable
+  FastAPI/Flask app, `init` now generates HTTP probes from the app's REAL
+  routes, configures a managed Flask server (base_url `{port}` +
+  `ready_path`), or emits a commented uvicorn block for FastAPI, and adds a
+  public_api probe for the detected package. Every generated config was
+  verified by route import; any failure falls back to the commented
+  template with a loud note. `init` on a Flask project is now a complete
+  one-command setup (init → baseline → check validated end-to-end).
+- Eval case 25 (`js_api_symbol_removed`): the js_api surface is now covered
+  by the eval suite. 25 cases.
 - Release workflow now runs the full pytest suite and the 24-case eval
   suite as a release gate, appends a computed detection-metrics table to
   the release notes, and attaches `summary.json` to the release.

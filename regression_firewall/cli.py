@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import textwrap
 import uuid
 from pathlib import Path
 
@@ -238,7 +239,8 @@ def cmd_init(args, root: Path) -> int:
 
     project = detect_project(root)
     target = root / ".regression-firewall.yml"
-    target.write_text(INIT_TEMPLATE, encoding="utf-8", newline="\n")
+    config_text, auto_notes = _auto_configure(root, project)
+    target.write_text(config_text, encoding="utf-8", newline="\n")
     (root / ARTIFACTS_DIR).mkdir(parents=True, exist_ok=True)
     _ensure_gitignore(root)
 
@@ -246,14 +248,115 @@ def cmd_init(args, root: Path) -> int:
     print(f"  Created: {target.name}")
     print(f"  Created: {ARTIFACTS_DIR}/")
     print(f"  Detected project: {project.name} ({project.summary()})")
-    if project.package_name:
+    for note in auto_notes:
+        print(f"  Auto-configured: {note}")
+    if project.package_name and not any("public_api" in n for n in auto_notes):
         print(f"  Suggested public_api probe module: {project.package_name}")
     print()
     print("Next steps:")
-    print("  1. Add probes under surfaces: (see the commented examples in the config)")
-    print("  2. regression-firewall discover   # verify what will be captured")
-    print("  3. regression-firewall baseline   # capture behavior before changes")
+    if auto_notes:
+        print("  1. Review the generated probes in .regression-firewall.yml")
+        print("  2. regression-firewall baseline   # capture behavior before changes")
+    else:
+        print("  1. Add probes under surfaces: (see the commented examples in the config)")
+        print("  2. regression-firewall discover   # verify what will be captured")
+        print("  3. regression-firewall baseline   # capture behavior before changes")
     return EXIT_OK
+
+
+def _auto_configure(root: Path, project) -> tuple:
+    """Scaffold .regression-firewall.yml pre-wired with what the project
+    actually has: HTTP probes generated from a detected app's real routes
+    (with a managed server for Flask), and a public_api probe for the
+    detected package. Anything that fails falls back to the commented
+    template — init must never write a config it could not verify."""
+    text = INIT_TEMPLATE
+    notes: list = []
+    try:
+        from .discovery.appdetect import detect_app_candidates, probes_from_routes, split_routes
+        from .discovery.routes import discover_routes
+
+        candidates = detect_app_candidates(root)
+        if candidates:
+            best = candidates[0]
+            routes, error = discover_routes(best.spec, root)
+            if error:
+                notes.append(
+                    f"detected {best.spec} ({best.framework}) but route discovery "
+                    f"failed: {error}"
+                )
+            else:
+                concrete, parameterized = split_routes(routes)
+                probes = probes_from_routes(concrete)
+                if probes:
+                    import yaml as _yaml
+
+                    block = _yaml.safe_dump(probes, sort_keys=False, default_flow_style=False)
+                    block = textwrap.indent(block.rstrip("\n"), "      ")
+                    old_http = (
+                        '    probes: []\n'
+                        '      # - id: "POST /login"\n'
+                        '      #   method: POST\n'
+                        '      #   path: /login\n'
+                        '      #   body: {"username": "alice", "password": "wrong"}'
+                    )
+                    text = text.replace(old_http, "    probes:\n" + block)
+                    notes.append(
+                        f"{len(probes)} HTTP probe(s) generated from {best.spec} "
+                        f"({best.framework})"
+                        + (f"; {len(parameterized)} parameterized route(s) excluded"
+                           if parameterized else "")
+                    )
+                    if best.framework == "flask":
+                        app_spec = f"{best.module}:{best.attr}"
+                        server_block = (
+                            "    server:\n"
+                            "      command: [\"python\", \"-m\", \"flask\", \"--app\", "
+                            f"\"{app_spec}\", \"run\", \"--host\", \"127.0.0.1\", "
+                            "\"--port\", \"{port}\"]\n"
+                            f"    ready_path: \"{concrete[0]['path'] if concrete else '/'}\"\n"
+                        )
+                        text = text.replace(
+                            '    base_url: "http://127.0.0.1:8000"',
+                            '    base_url: "http://127.0.0.1:{port}"\n' + server_block,
+                        )
+                        notes.append("managed Flask server configured")
+                    else:
+                        server_hint = (
+                            f"# For a managed server (FastAPI/uvicorn), uncomment:\n"
+                            f"#   server:\n"
+                            f"#     command: [\"python\", \"-m\", \"uvicorn\", "
+                            f"\"{best.module}:{best.attr}\", \"--host\", \"127.0.0.1\", "
+                            f"\"--port\", \"{{{{port}}}}\"]\n"
+                            f"#   ready_path: \"{concrete[0]['path'] if concrete else '/'}\"\n"
+                            f"# and set base_url to \"http://127.0.0.1:{{{{port}}}}\"\n"
+                        )
+                        text = text.replace(
+                            '    base_url: "http://127.0.0.1:8000"',
+                            server_hint + '    base_url: "http://127.0.0.1:8000"',
+                        )
+                        notes.append(
+                            "FastAPI detected: uncomment the server block after "
+                            "confirming uvicorn is available"
+                        )
+    except Exception as exc:  # noqa: BLE001 - init must always produce a config
+        notes.append(f"auto-configuration skipped ({type(exc).__name__}: {exc})")
+        text = INIT_TEMPLATE
+
+    if project.package_name:
+        old_api = (
+            "    probes: []\n"
+            "      # - id: mypackage\n"
+            "      #   module: mypackage"
+        )
+        if old_api in text:
+            text = text.replace(
+                old_api,
+                f"    probes:\n      - id: {project.package_name}\n"
+                f"        module: {project.package_name}",
+            )
+            notes.append(f"public_api probe added for module {project.package_name}")
+    return text, notes
 
 
 def cmd_discover(args, root: Path) -> int:

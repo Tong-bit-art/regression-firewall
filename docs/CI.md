@@ -49,6 +49,22 @@ jobs:
 
 Outputs: `verdict` (PASS/REVIEW/BLOCK), `score` (0–100), `report-path`.
 
+### PR comments
+
+With `comment: true` (and `pr-number: ${{ github.event.pull_request.number }}`),
+the action posts the full Markdown report as a PR comment and **keeps the
+same comment updated** on subsequent runs of the PR (matched by a hidden
+marker, so no comment spam). The job needs:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+Forked PRs receive a read-only token by default — comments from forks
+require approving maintainer-run workflows.
+
 ## Intent in CI
 
 - **Agent-authored PRs**: commit `.regression-firewall/intent.json` (or any

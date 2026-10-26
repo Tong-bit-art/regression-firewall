@@ -204,6 +204,7 @@ job summary:
   with:
     base-ref: ${{ github.event.pull_request.base.sha }}
     project-path: .
+    # comment: true              # post/refresh the report as a PR comment
     # intent-file: intent.json   # optional, committed by your agent
     # fail-on: review            # default: only BLOCK fails
     # install-command: pip install -r requirements.txt
@@ -308,10 +309,10 @@ by configured probes. It cannot detect behavior that no probe covers.
 
 ### Bundled eval (synthetic)
 
-24 hand-built cases: status flips, removed fields, type changes, exit-code
+25 hand-built cases: status flips, removed fields, type changes, exit-code
 flips, symbol removals, noise, intent. Runs the actual CLI end-to-end.
 
-**24/24 passed.** See [docs/EVALS.md](docs/EVALS.md).
+**25/25 passed.** See [docs/EVALS.md](docs/EVALS.md).
 
 ### Validation corpus (real projects)
 

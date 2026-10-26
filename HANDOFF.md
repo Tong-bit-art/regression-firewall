@@ -29,7 +29,7 @@ Firewall proves the old behavior still works.
 | Suite | Result |
 |---|---|
 | pytest | **338 passed / 0 failed** |
-| Bundled evals | **24/24** (recall 100%, FPR 0%, severity 100%, verdict 100%) |
+| Bundled evals | **25/25** (recall 100%, FPR 0%, severity 100%, verdict 100%) |
 | CI matrix | **7/7 green** (Ubuntu 3.11–3.13, Windows/macOS 3.12–3.13) + green dogfood workflow |
 | Fresh holdout V0.4 | **23/23 PASS** on datasette/pluggy/more-itertools (`docs/FINAL_HOLDOUT_V04.md`) |
 | Fresh holdout V0.3 | **21/21 PASS** on zod/isort/dateutil (`docs/FINAL_HOLDOUT_V03.md`) |
@@ -223,7 +223,7 @@ benchmarks/
 
 ## Evals & the GitHub Action
 
-- `python -m evals.runner` — 24 cases (V0.4 added sqlite count signal,
+- `python -m evals.runner` — 25 cases (V0.4 added sqlite count signal,
   V0.6 added runtime regression). Also wired into pytest and CI.
   `tests/integration/test_evals.py` derives the case count from disk —
   never pin the number.
@@ -259,6 +259,7 @@ environment=pypi) — **owner scheduled this for 2026-10-26**.
 | Plugin API for custom surfaces | DEFERRED | no consumer evidence yet |
 | Multi-agent validation matrix | DEFERRED | requires external vendors |
 | Per-release metric publishing | DONE 2026-10-26 | release.yml runs pytest+evals as a release gate and attaches `summary.json` + a metrics table to every GitHub Release |
+| Action PR comments | DONE 2026-10-26 | `comment: true` posts/updates a marker-matched PR comment with the full report; dogfood pass-path validates it on PRs |
 
 ## Known Limitations (honest, documented in README/docs)
 

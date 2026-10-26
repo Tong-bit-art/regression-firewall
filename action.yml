@@ -52,6 +52,14 @@ inputs:
     description: "Upload report files as workflow artifacts ('true'/'false')."
     required: false
     default: "true"
+  comment:
+    description: "Post the report as a PR comment and keep the same comment updated on later runs ('true'/'false'). Requires the pull-requests: write permission."
+    required: false
+    default: "false"
+  pr-number:
+    description: "Pull request number for the comment feature (pass github.event.pull_request.number). The comment step is skipped when empty."
+    required: false
+    default: ""
 
 outputs:
   verdict:
@@ -183,6 +191,35 @@ runs:
           [ "$REGFW_FAIL_ON" = "review" ] && exit 1 || true
         else
           echo "Regression Firewall verdict PASS: no unintended behavior change detected."
+        fi
+
+    - name: Post or update the PR comment
+      if: always() && inputs.comment == 'true' && inputs.pr-number != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        REPORT="$GITHUB_WORKSPACE/.regfw-head/${{ inputs.project-path }}/.regression-firewall/report.md"
+        if [ ! -f "$REPORT" ]; then
+          echo "no report to comment on; skipping"
+          exit 0
+        fi
+        BODY_FILE=$(mktemp)
+        {
+          echo "<!-- regression-firewall-report -->"
+          echo ""
+          cat "$REPORT"
+        } > "$BODY_FILE"
+        COMMENT_ID=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments"           --jq '.[] | select(.body | startswith("<!-- regression-firewall-report -->")) | .id'           | head -1 || true)
+        if [ -n "$COMMENT_ID" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$COMMENT_ID" -F body=@"$BODY_FILE" > /dev/null
+          echo "updated existing report comment #$COMMENT_ID"
+        else
+          gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@"$BODY_FILE" > /dev/null
+          echo "posted a new report comment"
         fi
 
     - name: Write job summary
