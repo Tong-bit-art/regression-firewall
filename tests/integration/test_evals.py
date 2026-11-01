@@ -24,8 +24,8 @@ def test_all_eval_cases_pass(eval_summary):
 def test_eval_quality_gates(eval_summary):
     """The V0.1 release gate from docs/EVALS.md."""
     summary = eval_summary["summary"]
-    assert summary["detection_recall"] >= 0.95
-    assert summary["false_positive_rate"] == 0.0
-    assert summary["verdict_accuracy"] == 1.0
-    assert summary["severity_accuracy"] == 1.0
-    assert summary["expected_change_accuracy"] == 1.0
+    assert summary["detection_recall"] >= 0.95, f"recall={summary['detection_recall']}"
+    assert summary["false_positive_rate"] == 0.0,         f"fp={summary['false_positive_rate']} (cases: {[r.case_id for r in eval_summary['results'] if r.extras]})"
+    assert summary["verdict_accuracy"] == 1.0,         f"verdicts: {[(r.case_id, r.expected_verdict, r.detected_verdict) for r in eval_summary['results'] if not r.verdict_ok]}"
+    assert summary["severity_accuracy"] == 1.0,         f"severity mismatches: {[(r.case_id, r.missing) for r in eval_summary['results'] if not r.severity_ok]}"
+    assert summary["expected_change_accuracy"] == 1.0,         f"expected-change misses: {[(r.case_id, r.missing) for r in eval_summary['results'] if not r.ok and r.case_type != 'no_change_control']}"
