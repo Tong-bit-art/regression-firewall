@@ -28,7 +28,7 @@ Firewall proves the old behavior still works.
 
 | Suite | Result |
 |---|---|
-| pytest | **338 passed / 0 failed** |
+| pytest | **346 passed / 0 failed** |
 | Bundled evals | **25/25** (recall 100%, FPR 0%, severity 100%, verdict 100%) |
 | CI matrix | **7/7 green** (Ubuntu 3.11–3.13, Windows/macOS 3.12–3.13) + green dogfood workflow |
 | Fresh holdout V0.4 | **23/23 PASS** on datasette/pluggy/more-itertools (`docs/FINAL_HOLDOUT_V04.md`) |
@@ -114,7 +114,7 @@ evals/                        # 24 deterministic end-to-end cases
 docs/                         # PRD, ARCHITECTURE, BEHAVIOR_MODEL,
                               #   NORMALIZATION, RISK_MODEL, EVALS, CI,
                               #   OPENAPI_IMPORT, RELEASE, FINAL_HOLDOUT*.md
-tests/                        # 338 tests (unit + integration + eval wrapper)
+tests/                        # 346 tests (unit + integration + eval wrapper)
 examples/                     # fastapi / flask / cli / python-library
 .github/                      # test.yml (7-job matrix), release.yml,
                               #   publish.yml (PyPI, manual), action-demo.yml
@@ -230,6 +230,12 @@ benchmarks/
   V0.6 added runtime regression). Also wired into pytest and CI.
   `tests/integration/test_evals.py` derives the case count from disk —
   never pin the number.
+- **Audit note (2026-11-01)**: eval case 24's original 0.02s baseline made
+  its median-ratio budget load-sensitive — one full-suite run flaked
+  (verdict_accuracy 25/26 → gate failure) while standalone runs passed.
+  Hardened to 0.1s→1.0s (10x nominal vs the 2x budget); the quality-gate
+  assertions now carry the offending case ids/verdicts in their messages.
+  Two consecutive full-suite runs green after the fix.
 - `action.yml` (composite GitHub Action): dual checkout → baseline on
   base-ref → check on head-ref → verdict→conclusion mapping
   (`fail-on: block|review`), report in `$GITHUB_STEP_SUMMARY`, artifacts.
